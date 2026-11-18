@@ -1,0 +1,16 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/MercadoYa.Shared/MercadoYa.Shared.csproj" />
+    <Project Path="src/MercadoYa.Api/MercadoYa.Api.csproj" />
+    <Project Path="src/MercadoYa.Worker/MercadoYa.Worker.csproj" />
+    <Project Path="src/MercadoYa.Payments/MercadoYa.Payments.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/">
+    <Project Path="src/Modules/Catalogo/MercadoYa.Modules.Catalogo.csproj" />
+    <Project Path="src/Modules/Inventario/MercadoYa.Modules.Inventario.csproj" />
+    <Project Path="src/Modules/Pedidos/MercadoYa.Modules.Pedidos.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/MercadoYa.Tests/MercadoYa.Tests.csproj" />
+  </Folder>
+</Solution>

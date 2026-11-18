@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <ItemGroup>
+    <PackageReference Include="Grpc.AspNetCore" Version="2.*" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.*" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../MercadoYa.Shared/MercadoYa.Shared.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Protobuf Include="../../contracts/payments.proto" GrpcServices="Server" />
+  </ItemGroup>
+</Project>

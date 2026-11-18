@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+option csharp_namespace = "MercadoYa.Payments.Grpc";
+package payments.v1;
+
+// Cobro simulado e idempotente por order_id: repetir devuelve el mismo resultado.
+service Payments {
+  rpc ChargeOrder (ChargeOrderRequest) returns (ChargeOrderReply);
+}
+
+message ChargeOrderRequest {
+  string order_id = 1;      // GUID del pedido
+  int64 amount_cents = 2;
+}
+
+enum PaymentStatus {
+  PAYMENT_STATUS_UNSPECIFIED = 0;
+  APROBADO = 1;
+  RECHAZADO = 2;
+}
+
+message ChargeOrderReply {
+  PaymentStatus status = 1;
+  string reason = 2;        // motivo cuando es RECHAZADO
+}

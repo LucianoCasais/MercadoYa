@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <ItemGroup>
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="7.*" />
+    <PackageReference Include="AspNetCore.HealthChecks.NpgSql" Version="9.*" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../MercadoYa.Shared/MercadoYa.Shared.csproj" />
+    <ProjectReference Include="../Modules/Catalogo/MercadoYa.Modules.Catalogo.csproj" />
+    <ProjectReference Include="../Modules/Inventario/MercadoYa.Modules.Inventario.csproj" />
+    <ProjectReference Include="../Modules/Pedidos/MercadoYa.Modules.Pedidos.csproj" />
+  </ItemGroup>
+</Project>

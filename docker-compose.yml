@@ -1,0 +1,117 @@
+# Infraestructura (postgres, keycloak, rabbitmq): `docker compose up -d`
+# Infraestructura + aplicaciones: `docker compose --profile app up -d --build`
+# Cuando exista el código de api/worker/payments/web, quitar los `profiles` para levantar todo con un solo comando.
+name: mercadoya
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: mercadoya
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mercadoya_dev}
+      POSTGRES_DB: mercadoya
+    ports: ["5432:5432"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mercadoya -d mercadoya"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    command: start-dev --import-realm
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin_dev}
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: mercadoya
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD:-mercadoya_dev}
+      # El issuer de los tokens es siempre http://localhost:8081 (navegador y servicios coinciden).
+      KC_HOSTNAME: http://localhost:8081
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+      KC_HTTP_ENABLED: "true"
+      KC_HEALTH_ENABLED: "true"
+    ports: ["8081:8080"]
+    volumes:
+      - ./infra/keycloak/mercadoya-realm.json:/opt/keycloak/data/import/mercadoya-realm.json:ro
+    depends_on:
+      postgres: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000; echo -e 'GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3; grep -q '200 OK' <&3"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 40s
+
+  rabbitmq:
+    image: rabbitmq:4-management
+    environment:
+      RABBITMQ_DEFAULT_USER: mercadoya
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-mercadoya_dev}
+    ports: ["5672:5672", "15672:15672"]
+    volumes:
+      - ./infra/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      - ./infra/rabbitmq/definitions.json:/etc/rabbitmq/definitions.json:ro
+      - rabbitdata:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    profiles: ["app"]
+    build: { context: ., dockerfile: Dockerfile.dotnet, args: { PROJECT: MercadoYa.Api } }
+    environment: &dotnet-env
+      ConnectionStrings__Mercadoya: Host=postgres;Database=mercadoya;Username=mercadoya;Password=${POSTGRES_PASSWORD:-mercadoya_dev}
+      Keycloak__Authority: http://keycloak:8080/realms/mercadoya
+      Keycloak__Issuer: http://localhost:8081/realms/mercadoya
+      Keycloak__Audience: mercadoya-api
+      RabbitMq__Host: rabbitmq
+      RabbitMq__User: mercadoya
+      RabbitMq__Password: ${RABBITMQ_PASSWORD:-mercadoya_dev}
+    ports: ["5001:8080"]
+    depends_on:
+      postgres: { condition: service_healthy }
+      keycloak: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+
+  worker:
+    profiles: ["app"]
+    build: { context: ., dockerfile: Dockerfile.dotnet, args: { PROJECT: MercadoYa.Worker } }
+    environment:
+      <<: *dotnet-env
+      ConnectionStrings__Pedidos: Host=postgres;Database=mercadoya;Username=mercadoya;Password=${POSTGRES_PASSWORD:-mercadoya_dev}
+      Api__BaseUrl: http://api:8080
+      Payments__GrpcUrl: http://payments:8081
+      Keycloak__TokenUrl: http://keycloak:8080/realms/mercadoya/protocol/openid-connect/token
+      Keycloak__ClientId: orders-worker
+      Keycloak__ClientSecret: ${ORDERS_WORKER_SECRET:-dev-only-change-me}
+    depends_on:
+      api: { condition: service_started }
+      payments: { condition: service_started }
+
+  payments:
+    profiles: ["app"]
+    build: { context: ., dockerfile: Dockerfile.dotnet, args: { PROJECT: MercadoYa.Payments } }
+    environment:
+      <<: *dotnet-env
+      ConnectionStrings__Payments: Host=postgres;Database=payments;Username=mercadoya;Password=${POSTGRES_PASSWORD:-mercadoya_dev}
+    ports: ["5003:8081"]   # gRPC (HTTP/2); el 8080 interno queda para health checks
+    depends_on:
+      postgres: { condition: service_healthy }
+      keycloak: { condition: service_healthy }
+
+  web:
+    profiles: ["app"]
+    build: ./web           # Angular + nginx (pendiente de crear con `ng new`)
+    ports: ["3000:80"]
+    depends_on: [api]
+
+volumes:
+  pgdata:
+  rabbitdata:
