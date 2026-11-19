@@ -28,6 +28,8 @@ app.MapHealthChecks("/health/ready", new() { Predicate = r => r.Tags.Contains("r
 
 var v1 = app.MapGroup("/api/v1");
 v1.MapCatalogoEndpoints();
+v1.MapCatalogoAdminEndpoints();     // ABM de productos (rol admin)
+v1.MapInventarioAdminEndpoints();   // PATCH de stock (rol admin)
 v1.MapPedidosEndpoints();
 app.MapInventarioInternalEndpoints();
 

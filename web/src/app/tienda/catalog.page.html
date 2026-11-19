@@ -17,8 +17,14 @@
   <div class="grid">
     @for (p of result()!.items; track p.id) {
       <div class="card">
-        <div class="ph">Imagen</div>
-        <h4>{{ p.name }}</h4>
+        <a class="lnk" [routerLink]="['/tienda/producto', p.id]">
+          @if (p.imageUrl) {
+            <img class="ph" [src]="p.imageUrl" [alt]="p.name" loading="lazy" />
+          } @else {
+            <div class="ph">Imagen</div>
+          }
+          <h4>{{ p.name }}</h4>
+        </a>
         <div class="price">{{ p.priceCents | money }}</div>
         @if (p.stock > 0) {
           <button class="btn w" type="button" (click)="add(p)">

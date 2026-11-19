@@ -4,7 +4,8 @@ import { roleGuard } from './core/guards';
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'tienda' },
   { path: 'tienda', loadComponent: () => import('./tienda/catalog.page').then((m) => m.CatalogPage) },
-  { path: 'tienda/carrito', loadComponent: () => import('./tienda/cart.page').then((m) => m.CartPage) },
+  { path: 'tienda/producto/:id', loadComponent: () => import('./tienda/product.page').then((m) => m.ProductPage) },
+  { path: 'tienda/carrito',loadComponent: () => import('./tienda/cart.page').then((m) => m.CartPage) },
   {
     // Dia 8: checkout de 5 pasos. Hoy solo valida que el guard exige sesion y rol cliente.
     path: 'tienda/checkout',

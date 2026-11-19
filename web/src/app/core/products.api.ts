@@ -29,4 +29,9 @@ export class ProductsApi {
     if (search.trim()) params['search'] = search.trim();
     return this.http.get<Paged<Product>>(`${CONFIG.apiUrl}/api/v1/products`, { params });
   }
+
+  /** Detalle publico. La API responde 404 si el producto no existe o esta dado de baja. */
+  get(id: number): Observable<Product> {
+    return this.http.get<Product>(`${CONFIG.apiUrl}/api/v1/products/${id}`);
+  }
 }

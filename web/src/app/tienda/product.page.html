@@ -1,0 +1,43 @@
+<nav class="crumb"><a routerLink="/tienda">← Volver al catálogo</a></nav>
+
+@if (loading()) {
+  <div class="pd" aria-busy="true"><div class="ph skel"></div><div class="card skel"></div></div>
+} @else if (notFound()) {
+  <div class="empty">
+    <h1>Producto no encontrado</h1>
+    <p class="muted">Puede que no exista o que ya no esté a la venta.</p>
+    <a class="btn" routerLink="/tienda">Ir al catálogo</a>
+  </div>
+} @else if (error()) {
+  <div class="empty">
+    <p class="err" role="alert">{{ error() }}</p>
+    <button class="btn" type="button" (click)="load(id())">Reintentar</button>
+  </div>
+} @else if (product(); as p) {
+  <div class="pd">
+    @if (p.imageUrl) {
+      <img class="ph" [src]="p.imageUrl" [alt]="p.name" />
+    } @else {
+      <div class="ph">Imagen del producto</div>
+    }
+    <div>
+      <h1>{{ p.name }}</h1>
+      <div class="big">{{ p.priceCents | money }}</div>
+      <p class="muted">{{ p.stock > 0 ? 'Stock disponible: ' + p.stock + ' unidades' : 'Sin stock' }}</p>
+      @if (p.description) {
+        <p>{{ p.description }}</p>
+      }
+      @if (p.stock > 0) {
+        <button class="btn w" type="button" (click)="add(p)">
+          Agregar al carrito{{ cart.quantityOf(p.id) ? ' (' + cart.quantityOf(p.id) + ' en el carrito)' : '' }}
+        </button>
+        @if (cart.quantityOf(p.id)) {
+          <a class="btn o w gap" routerLink="/tienda/carrito">Ver carrito</a>
+        }
+      } @else {
+        <button class="btn o w" type="button" disabled>Sin stock</button>
+      }
+      <p class="err" role="alert">{{ notice() }}</p>
+    </div>
+  </div>
+}

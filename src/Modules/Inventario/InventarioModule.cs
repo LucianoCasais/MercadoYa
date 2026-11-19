@@ -34,6 +34,13 @@ public sealed record StockItem(int ProductId, int Quantity);
 public sealed record ReserveRequest(Guid OrderId, IReadOnlyList<StockItem> Items);
 public enum ReserveResult { Reserved, AlreadyReserved, InsufficientStock }
 
+/// PATCH /api/v1/admin/products/{id}/stock. Delta positivo = ingreso de mercaderia, negativo = baja (rotura, conteo, etc.).
+/// Se usa delta y no un valor absoluto para no pisar ventas concurrentes.
+public sealed record StockAdjustRequest(int Delta);
+public sealed record StockAdjustedDto(int ProductId, int Stock);
+public enum AdjustOutcome { Adjusted, NotFound, WouldBeNegative }
+public sealed record AdjustResult(AdjustOutcome Outcome, int Stock = 0);
+
 /// Reserva atomica e idempotente: UPDATE ... SET Stock = Stock - n WHERE Stock >= n, todos los items en una transaccion.
 public sealed class StockService(InventarioDbContext db)
 {
@@ -75,6 +82,26 @@ public sealed class StockService(InventarioDbContext db)
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
     }
+
+    public const int MaxAdjustDelta = 100_000;
+
+    /// Ajuste manual del admin: UPDATE atomico (nunca deja stock negativo) + StockMovement 'Ajuste' en la misma transaccion.
+    public async Task<AdjustResult> AdjustAsync(int productId, int delta, CancellationToken ct)
+    {
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        var updated = await db.Database.SqlQuery<int>(
+            $"""UPDATE catalogo."Product" SET "Stock" = "Stock" + {delta} WHERE "Id" = {productId} AND "Stock" + {delta} >= 0 RETURNING "Stock" AS "Value" """)
+            .ToListAsync(ct);
+        if (updated.Count == 0)
+        {
+            var exists = (await db.Database.SqlQuery<int>($"""SELECT 1 AS "Value" FROM catalogo."Product" WHERE "Id" = {productId}""").ToListAsync(ct)).Count > 0;
+            return new AdjustResult(exists ? AdjustOutcome.WouldBeNegative : AdjustOutcome.NotFound);
+        }
+        db.Movements.Add(new StockMovement { ProductId = productId, Delta = delta, Reason = "Ajuste" });
+        await db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
+        return new AdjustResult(AdjustOutcome.Adjusted, updated[0]);
+    }
 }
 
 public static class InventarioModule
@@ -92,5 +119,24 @@ public static class InventarioModule
         g.MapPost("/reservations/{orderId:guid}/release", async (Guid orderId, StockService s, CancellationToken ct) =>
         { await s.ReleaseAsync(orderId, "Liberacion", ct); return Results.Ok(); });
         return app;
+    }
+
+    /// PATCH /api/v1/admin/products/{id}/stock: solo rol admin.
+    public static IEndpointRouteBuilder MapInventarioAdminEndpoints(this IEndpointRouteBuilder v1)
+    {
+        v1.MapPatch("/admin/products/{id:int}/stock", async (int id, StockAdjustRequest r, StockService s, CancellationToken ct) =>
+        {
+            if (r.Delta == 0 || Math.Abs(r.Delta) > StockService.MaxAdjustDelta)
+                return Results.ValidationProblem(new Dictionary<string, string[]>
+                    { ["delta"] = [$"El ajuste debe ser distinto de 0 y de hasta {StockService.MaxAdjustDelta} unidades."] });
+            var res = await s.AdjustAsync(id, r.Delta, ct);
+            return res.Outcome switch
+            {
+                AdjustOutcome.Adjusted => Results.Ok(new StockAdjustedDto(id, res.Stock)),
+                AdjustOutcome.NotFound => Results.Problem(statusCode: 404, title: "Producto no encontrado", detail: $"No existe el producto {id}."),
+                _ => Results.Problem(statusCode: 409, title: "Stock insuficiente", detail: "El ajuste dejaria el stock en negativo."),
+            };
+        }).RequireAuthorization(Policies.Admin).WithTags("Admin - Productos");
+        return v1;
     }
 }
