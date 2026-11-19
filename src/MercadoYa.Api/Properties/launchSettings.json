@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "MercadoYa.Api": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:63371;http://localhost:63373"
+    }
+  }
+}

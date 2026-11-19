@@ -1,3 +1,4 @@
+using MercadoYa.Api;
 using MercadoYa.Modules.Catalogo;
 using MercadoYa.Modules.Inventario;
 using MercadoYa.Modules.Pedidos;
@@ -7,6 +8,7 @@ var builder = WebApplication.CreateBuilder(args);
 var cs = builder.Configuration.GetConnectionString("Mercadoya")!;
 
 builder.Services.AddCatalogoModule(cs).AddInventarioModule(cs).AddPedidosModule(cs);
+builder.Services.AddScoped<IProductLookup, CatalogProductLookup>();   // adaptador Pedidos -> Catalogo
 builder.Services.AddKeycloakAuth(builder.Configuration);
 builder.Services.AddProblemDetails();
 builder.Services.AddEndpointsApiExplorer().AddSwaggerGen();

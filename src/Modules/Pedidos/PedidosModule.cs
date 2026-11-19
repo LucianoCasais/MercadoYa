@@ -1,40 +1,11 @@
 using MercadoYa.Shared;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Npgsql;
 
 namespace MercadoYa.Modules.Pedidos;
-
-public sealed class Order
-{
-    public Guid Id { get; set; } = Guid.NewGuid();
-    public string UserId { get; set; } = "";
-    public OrderStatus Status { get; private set; } = OrderStatus.Pendiente;
-    public RejectionReason? Reason { get; private set; }
-    public long TotalCents { get; set; }
-    public string IdempotencyKey { get; set; } = "";
-    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
-    public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
-    public List<OrderItem> Items { get; set; } = [];
-
-    /// Maquina de estados: Pendiente -> Confirmado | Rechazado; Confirmado -> Entregado | Cancelado.
-    public bool TryTransition(OrderStatus to, RejectionReason? reason = null)
-    {
-        var allowed = (Status, to) is (OrderStatus.Pendiente, OrderStatus.Confirmado) or (OrderStatus.Pendiente, OrderStatus.Rechazado)
-            or (OrderStatus.Confirmado, OrderStatus.Entregado) or (OrderStatus.Confirmado, OrderStatus.Cancelado);
-        if (!allowed || (to == OrderStatus.Rechazado) != reason.HasValue) return false;
-        Status = to; Reason = reason; UpdatedAt = DateTimeOffset.UtcNow;
-        return true;
-    }
-}
-
-public sealed class OrderItem
-{
-    public Guid OrderId { get; set; } public int ProductId { get; set; }
-    public string ProductName { get; set; } = ""; public long UnitPriceCents { get; set; } public int Quantity { get; set; }
-}
 
 public sealed class PedidosDbContext(DbContextOptions<PedidosDbContext> options) : DbContext(options)
 {
@@ -54,16 +25,41 @@ public sealed class PedidosDbContext(DbContextOptions<PedidosDbContext> options)
     }
 }
 
+/// Persistencia de pedidos con EF Core. La unicidad de (UserId, IdempotencyKey) la garantiza el indice unico de la BD.
+public sealed class EfOrderRepository(PedidosDbContext db) : IOrderRepository
+{
+    public Task<Order?> FindByKeyAsync(string userId, string idempotencyKey, CancellationToken ct) =>
+        db.Orders.Include(o => o.Items).FirstOrDefaultAsync(o => o.UserId == userId && o.IdempotencyKey == idempotencyKey, ct);
+
+    public async Task<bool> TryAddAsync(Order order, CancellationToken ct)
+    {
+        db.Orders.Add(order);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+            return true;
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+        {
+            db.ChangeTracker.Clear();   // el pedido no se guardo: se descarta del contexto
+            return false;
+        }
+    }
+
+    public Task SaveAsync(CancellationToken ct) => db.SaveChangesAsync(ct);
+}
+
 public static class PedidosModule
 {
+    /// Registra el modulo con los FAKES de stock y pago (dia 3). La API registra el IProductLookup real; los dias 5 y 8
+    /// se registran los clientes reales de IStockClient e IPaymentGateway DESPUES de esta llamada (la ultima registracion gana).
     public static IServiceCollection AddPedidosModule(this IServiceCollection s, string cs) =>
-        s.AddDbContext<PedidosDbContext>(o => o.UseNpgsql(cs));
+        s.AddDbContext<PedidosDbContext>(o => o.UseNpgsql(cs))
+         .AddScoped<IOrderRepository, EfOrderRepository>()
+         .AddScoped<IStockClient, FakeStockClient>()
+         .AddScoped<IPaymentGateway, FakePaymentGateway>()
+         .AddScoped<CheckoutService>();
 
-    /// TODO (dias 3-5 y 9): POST /orders (202, Idempotency-Key, publica OrderRequested), GET /orders/{id} (userId = claim sub),
-    /// GET /admin/orders y PATCH /admin/orders/{id}/status (Admin; Cancelado libera stock).
-    public static IEndpointRouteBuilder MapPedidosEndpoints(this IEndpointRouteBuilder v1)
-    {
-        v1.MapPost("/orders", () => Results.StatusCode(StatusCodes.Status501NotImplemented)).RequireAuthorization(Policies.Cliente);
-        return v1;
-    }
+    /// TODO (dia 5): GET /orders/{id} (userId = claim sub). TODO (dias 11-12): admin de pedidos. TODO (dia 8): POST /orders pasa a 202 y publica OrderRequested.
+    public static IEndpointRouteBuilder MapPedidosEndpoints(this IEndpointRouteBuilder v1) => v1.MapCheckoutEndpoints();
 }

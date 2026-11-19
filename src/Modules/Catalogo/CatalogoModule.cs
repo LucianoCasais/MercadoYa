@@ -37,7 +37,7 @@ public static class CatalogoModule
     /// Rutas publicas del catalogo (GET /products acepta search, categoryId, page y pageSize). TODO (dia 4-5): ABM de productos y PATCH de stock con la politica Admin; cache en memoria.
     public static IEndpointRouteBuilder MapCatalogoEndpoints(this IEndpointRouteBuilder v1)
     {
-        v1.MapGet("/products", async (CatalogoDbContext db, string? search, int? categoryId, int page, int pageSize, CancellationToken ct) =>
+        v1.MapGet("/products", async (CatalogoDbContext db, string? search, int? categoryId, CancellationToken ct, int page = 1, int pageSize = 12) =>
         {
             page = Math.Max(page, 1); pageSize = pageSize is < 1 or > 50 ? 12 : pageSize;
             var q = db.Products.AsNoTracking().Where(p => p.Active);

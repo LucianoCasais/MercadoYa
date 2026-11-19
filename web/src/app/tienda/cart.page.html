@@ -1,0 +1,41 @@
+@if (!cart.count()) {
+  <div class="empty">
+    <h1>Tu carrito está vacío</h1>
+    <a class="btn" routerLink="/tienda">Ir al catálogo</a>
+  </div>
+} @else {
+  <h1>Tu carrito</h1>
+  <div class="two">
+    <div class="card tw">
+      <table>
+        <thead><tr><th>Producto</th><th>Precio</th><th>Cant.</th><th>Subtotal</th><th></th></tr></thead>
+        <tbody>
+          @for (l of cart.lines(); track l.productId) {
+            <tr>
+              <td>{{ l.name }}</td>
+              <td>{{ l.priceCents | money }}</td>
+              <td class="stp">
+                <button class="btn o sm" type="button" aria-label="Quitar uno" (click)="cart.decrease(l.productId)">−</button>
+                <span aria-live="polite">{{ l.quantity }}</span>
+                <button class="btn o sm" type="button" aria-label="Agregar uno" (click)="inc(l.productId)">+</button>
+              </td>
+              <td>{{ l.priceCents * l.quantity | money }}</td>
+              <td><button class="btn o sm" type="button" (click)="cart.remove(l.productId)">Quitar</button></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+      <p class="err" role="alert">{{ notice() }}</p>
+    </div>
+    <div class="card">
+      <h4>Resumen</h4>
+      <p class="muted">Productos: {{ cart.count() }}</p>
+      <p class="total">Total {{ cart.totalCents() | money }}</p>
+      @if (auth.authenticated() === false) {
+        <p class="muted">Para continuar te pediremos iniciar sesión.</p>
+      }
+      <button class="btn w" type="button" (click)="next()">Continuar</button>
+      <button class="btn o w gap" type="button" (click)="cart.clear()">Vaciar carrito</button>
+    </div>
+  </div>
+}

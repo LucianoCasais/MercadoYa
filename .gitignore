@@ -3,3 +3,5 @@ obj/
 .env
 *.user
 node_modules/
+
+.vs/
