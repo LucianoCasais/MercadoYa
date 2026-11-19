@@ -34,7 +34,8 @@ public static class CatalogoModule
     public static IServiceCollection AddCatalogoModule(this IServiceCollection s, string connectionString) =>
         s.AddDbContext<CatalogoDbContext>(o => o.UseNpgsql(connectionString));
 
-    /// Rutas publicas del catalogo (GET /products acepta search, categoryId, page y pageSize). TODO (dia 4-5): ABM de productos y PATCH de stock con la politica Admin; cache en memoria.
+    /// Rutas publicas del catalogo (GET /products acepta search, categoryId, page y pageSize). El ABM esta en CatalogoAdminEndpoints.
+    /// TODO (dia 9): cache en memoria, invalidada por el ABM y por los cambios de stock.
     public static IEndpointRouteBuilder MapCatalogoEndpoints(this IEndpointRouteBuilder v1)
     {
         v1.MapGet("/products", async (CatalogoDbContext db, string? search, int? categoryId, CancellationToken ct, int page = 1, int pageSize = 12) =>
