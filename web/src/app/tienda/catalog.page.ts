@@ -1,6 +1,7 @@
 import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { AuthService } from '../core/auth.service';
 import { CartService } from '../core/cart.service';
 import { Paged, Product, ProductsApi } from '../core/products.api';
 import { MoneyPipe } from '../shared/money.pipe';
@@ -16,6 +17,7 @@ export class CatalogPage implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   protected readonly cart = inject(CartService);
+  protected readonly auth = inject(AuthService);
 
   protected search = '';
   protected readonly page = signal(1);
@@ -23,6 +25,7 @@ export class CatalogPage implements OnInit, OnDestroy {
   protected readonly loading = signal(true);
   protected readonly error = signal('');
   protected readonly notice = signal('');
+  protected readonly needLogin = signal(false);
   private timer?: ReturnType<typeof setTimeout>;
 
   ngOnInit(): void {
@@ -56,6 +59,13 @@ export class CatalogPage implements OnInit, OnDestroy {
   }
 
   protected add(p: Product): void {
+    // El carrito es por usuario: sin sesion no se puede agregar.
+    if (!this.auth.authenticated()) {
+      this.needLogin.set(true);
+      this.notice.set('Tenés que iniciar sesión para agregar productos al carrito.');
+      return;
+    }
+    this.needLogin.set(false);
     this.notice.set(this.cart.add(p) ? '' : 'No hay más stock disponible de ' + p.name);
   }
 
