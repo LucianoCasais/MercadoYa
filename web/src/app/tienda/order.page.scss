@@ -1,0 +1,12 @@
+.head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; word-break: break-all; }
+.badge { padding: 3px 10px; border-radius: 999px; font-size: .85rem; font-weight: 600; background: #eef2f0; color: var(--ink);
+  &.confirmado, &.entregado { background: #e1f3ea; color: var(--brand-dark); }
+  &.rechazado, &.cancelado { background: #fbe6e4; color: var(--err); }
+  &.pendiente { background: #fff3d6; color: #7a5a00; }
+}
+table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+th, td { text-align: left; padding: 8px; border-bottom: 1px solid var(--line); }
+.total { font-size: 1.25rem; font-weight: 700; }
+.nav { display: flex; justify-content: space-between; gap: 8px; margin-top: 16px; }
+.skel { height: 220px; background: linear-gradient(90deg, #eef2f0, #f8faf9, #eef2f0); }
+h2 { margin: 0 0 12px; font-size: 1.15rem; }

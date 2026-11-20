@@ -7,7 +7,7 @@ namespace MercadoYa.Modules.Pedidos;
 public sealed record OrderLineRequest(int ProductId, int Quantity);
 public sealed record CreateOrderRequest(IReadOnlyList<OrderLineRequest>? Items);
 public sealed record OrderLineResponse(int ProductId, string ProductName, long UnitPriceCents, int Quantity);
-public sealed record OrderResponse(Guid Id, string Status, string? Reason, long TotalCents, DateTimeOffset CreatedAt, IReadOnlyList<OrderLineResponse> Items);
+public sealed record OrderResponse(Guid Id, string Status, string? Reason, long TotalCents, DateTimeOffset CreatedAt, IReadOnlyList<OrderLineResponse> Items, string BuyerName = "");
 
 // ---- Puertos: el modulo Pedidos no conoce a Catalogo, Inventario ni Payments, solo estas interfaces. ----
 public sealed record ProductInfo(int Id, string Name, long PriceCents, bool Active);
@@ -36,6 +36,8 @@ public interface IPaymentGateway
 public interface IOrderRepository
 {
     Task<Order?> FindByKeyAsync(string userId, string idempotencyKey, CancellationToken ct);
+    /// Pedido del usuario indicado; null si no existe o es de otro usuario.
+    Task<Order?> FindByIdAsync(string userId, Guid orderId, CancellationToken ct);
     /// false si ya existe un pedido con el mismo (UserId, IdempotencyKey).
     Task<bool> TryAddAsync(Order order, CancellationToken ct);
     Task SaveAsync(CancellationToken ct);
@@ -58,7 +60,8 @@ public sealed class CheckoutService(IProductLookup products, IStockClient stock,
     public const int MaxQuantityPerLine = 99;
     public const int MaxIdempotencyKeyLength = 100;
 
-    public async Task<PlaceOrderResult> PlaceAsync(string userId, string? idempotencyKey, CreateOrderRequest? request, CancellationToken ct)
+    /// buyerName sale del token (nunca del cuerpo de la request) y se guarda en el pedido.
+    public async Task<PlaceOrderResult> PlaceAsync(string userId, string? idempotencyKey, CreateOrderRequest? request, CancellationToken ct, string? buyerName = null)
     {
         if (string.IsNullOrWhiteSpace(userId)) return PlaceOrderResult.Fail("Usuario no identificado.");
         var key = idempotencyKey?.Trim();
@@ -77,7 +80,7 @@ public sealed class CheckoutService(IProductLookup products, IStockClient stock,
             if (!found.TryGetValue(l.ProductId, out var p) || !p.Active)
                 return PlaceOrderResult.Fail($"El producto {l.ProductId} no existe o no esta disponible.");
 
-        var order = new Order { UserId = userId, IdempotencyKey = key };
+        var order = new Order { UserId = userId, IdempotencyKey = key, BuyerName = BuyerInfo.Clean(buyerName) };
         foreach (var l in lines)
         {
             var p = found[l.ProductId];
@@ -125,6 +128,13 @@ public sealed class CheckoutService(IProductLookup products, IStockClient stock,
         return new PlaceOrderResult(ToResponse(order), null, false);
     }
 
+    /// Consulta de un pedido propio (seguimiento). Devuelve null si no existe o pertenece a otro usuario.
+    public async Task<OrderResponse?> GetAsync(string userId, Guid orderId, CancellationToken ct)
+    {
+        var order = await orders.FindByIdAsync(userId, orderId, ct);
+        return order is null ? null : ToResponse(order);
+    }
+
     /// Valida y unifica las lineas: al menos una, cantidades de 1 a 99, ids positivos, sin ids repetidos (se suman).
     public static IReadOnlyList<OrderLineRequest>? Normalize(IReadOnlyList<OrderLineRequest>? items, out string? error)
     {
@@ -144,7 +154,8 @@ public sealed class CheckoutService(IProductLookup products, IStockClient stock,
 
     public static OrderResponse ToResponse(Order o) => new(
         o.Id, o.Status.ToString(), o.Reason?.ToString(), o.TotalCents, o.CreatedAt,
-        o.Items.OrderBy(i => i.ProductId).Select(i => new OrderLineResponse(i.ProductId, i.ProductName, i.UnitPriceCents, i.Quantity)).ToList());
+        o.Items.OrderBy(i => i.ProductId).Select(i => new OrderLineResponse(i.ProductId, i.ProductName, i.UnitPriceCents, i.Quantity)).ToList(),
+        o.BuyerName);
 
     private async Task<StockReserveOutcome> ReserveAsync(Order order, IReadOnlyList<OrderLineRequest> lines, CancellationToken ct)
     {

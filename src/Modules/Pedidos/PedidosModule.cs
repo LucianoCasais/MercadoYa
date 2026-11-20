@@ -18,6 +18,7 @@ public sealed class PedidosDbContext(DbContextOptions<PedidosDbContext> options)
             e.ToTable("Order");
             e.Property(x => x.Status).HasConversion<string>().HasMaxLength(12);
             e.Property(x => x.Reason).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.BuyerName).HasMaxLength(BuyerInfo.MaxLength);
             e.HasIndex(x => new { x.UserId, x.IdempotencyKey }).IsUnique();
             e.HasMany(x => x.Items).WithOne().HasForeignKey(i => i.OrderId);
         });
@@ -30,6 +31,9 @@ public sealed class EfOrderRepository(PedidosDbContext db) : IOrderRepository
 {
     public Task<Order?> FindByKeyAsync(string userId, string idempotencyKey, CancellationToken ct) =>
         db.Orders.Include(o => o.Items).FirstOrDefaultAsync(o => o.UserId == userId && o.IdempotencyKey == idempotencyKey, ct);
+
+    public Task<Order?> FindByIdAsync(string userId, Guid orderId, CancellationToken ct) =>
+        db.Orders.AsNoTracking().Include(o => o.Items).FirstOrDefaultAsync(o => o.Id == orderId && o.UserId == userId, ct);
 
     public async Task<bool> TryAddAsync(Order order, CancellationToken ct)
     {
@@ -60,6 +64,6 @@ public static class PedidosModule
          .AddScoped<IPaymentGateway, FakePaymentGateway>()
          .AddScoped<CheckoutService>();
 
-    /// TODO (dia 5): GET /orders/{id} (userId = claim sub). TODO (dias 11-12): admin de pedidos. TODO (dia 8): POST /orders pasa a 202 y publica OrderRequested.
+    /// GET /orders/{id} ya esta (adelantado del dia 5 para el seguimiento). TODO (dias 11-12): admin de pedidos. TODO (dia 8): POST /orders pasa a 202 y publica OrderRequested.
     public static IEndpointRouteBuilder MapPedidosEndpoints(this IEndpointRouteBuilder v1) => v1.MapCheckoutEndpoints();
 }

@@ -13,6 +13,8 @@ public class CheckoutServiceTests
         public List<Order> Saved { get; } = [];
         public Task<Order?> FindByKeyAsync(string userId, string key, CancellationToken ct) =>
             Task.FromResult(Saved.FirstOrDefault(o => o.UserId == userId && o.IdempotencyKey == key));
+        public Task<Order?> FindByIdAsync(string userId, Guid orderId, CancellationToken ct) =>
+            Task.FromResult(Saved.FirstOrDefault(o => o.Id == orderId && o.UserId == userId));
         public Task<bool> TryAddAsync(Order order, CancellationToken ct)
         {
             if (Saved.Any(o => o.UserId == order.UserId && o.IdempotencyKey == order.IdempotencyKey)) return Task.FromResult(false);
@@ -202,5 +204,50 @@ public class CheckoutServiceTests
 
         Assert.Equal(PaymentOutcome.Rejected, (await gw.ChargeAsync(Guid.NewGuid(), 999, CancellationToken.None)).Outcome);
         Assert.Equal(PaymentOutcome.Approved, (await gw.ChargeAsync(Guid.NewGuid(), 480000, CancellationToken.None)).Outcome);
+    }
+
+    [Fact]
+    public async Task Guarda_el_nombre_del_comprador_en_el_pedido()
+    {
+        var orders = new InMemoryOrders();
+        var r = await Build(orders, new ScriptedStock(), new ScriptedPayments())
+            .PlaceAsync("user-1", "key-1", Items((1, 1)), CancellationToken.None, "  Cliente Prueba ");
+
+        Assert.Equal("Cliente Prueba", r.Order!.BuyerName);
+        Assert.Equal("Cliente Prueba", orders.Saved.Single().BuyerName);
+    }
+
+    [Fact]
+    public async Task Sin_nombre_el_pedido_se_crea_igual()
+    {
+        var r = await Build(new InMemoryOrders(), new ScriptedStock(), new ScriptedPayments())
+            .PlaceAsync("user-1", "key-1", Items((1, 1)), CancellationToken.None);
+
+        Assert.True(r.IsValid);
+        Assert.Equal("", r.Order!.BuyerName);
+    }
+
+    [Fact]
+    public async Task Consultar_un_pedido_propio_lo_devuelve()
+    {
+        var checkout = Build(new InMemoryOrders(), new ScriptedStock(), new ScriptedPayments());
+        var placed = await checkout.PlaceAsync("user-1", "key-1", Items((1, 2)), CancellationToken.None);
+
+        var found = await checkout.GetAsync("user-1", placed.Order!.Id, CancellationToken.None);
+
+        Assert.NotNull(found);
+        Assert.Equal(placed.Order.Id, found!.Id);
+        Assert.Equal("Confirmado", found.Status);
+        Assert.Single(found.Items);
+    }
+
+    [Fact]
+    public async Task Consultar_el_pedido_de_otro_usuario_o_inexistente_devuelve_null()
+    {
+        var checkout = Build(new InMemoryOrders(), new ScriptedStock(), new ScriptedPayments());
+        var placed = await checkout.PlaceAsync("user-1", "key-1", Items((1, 1)), CancellationToken.None);
+
+        Assert.Null(await checkout.GetAsync("user-2", placed.Order!.Id, CancellationToken.None));
+        Assert.Null(await checkout.GetAsync("user-1", Guid.NewGuid(), CancellationToken.None));
     }
 }

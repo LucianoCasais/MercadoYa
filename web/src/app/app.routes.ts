@@ -7,10 +7,15 @@ export const routes: Routes = [
   { path: 'tienda/producto/:id', loadComponent: () => import('./tienda/product.page').then((m) => m.ProductPage) },
   { path: 'tienda/carrito',loadComponent: () => import('./tienda/cart.page').then((m) => m.CartPage) },
   {
-    // Dia 8: checkout de 5 pasos. Hoy solo valida que el guard exige sesion y rol cliente.
+    // Checkout de 5 pasos (los 4 primeros viven en CheckoutPage; el 5 es el seguimiento en /tienda/pedido/:id). Exige sesion y rol cliente.
     path: 'tienda/checkout',
     canActivate: [roleGuard('cliente')],
     loadComponent: () => import('./tienda/checkout.page').then((m) => m.CheckoutPage),
+  },
+  {
+    path: 'tienda/pedido/:id',
+    canActivate: [roleGuard('cliente')],
+    loadComponent: () => import('./tienda/order.page').then((m) => m.OrderPage),
   },
   {
     path: 'admin',

@@ -19,10 +19,20 @@ public static class CheckoutEndpoints
             if (string.IsNullOrEmpty(userId)) return Results.Unauthorized();
 
             var key = http.Request.Headers[MercadoYa.Shared.Headers.IdempotencyKey].ToString();
-            var result = await checkout.PlaceAsync(userId, key, body, ct);
+            var result = await checkout.PlaceAsync(userId, key, body, ct, BuyerInfo.From(http.User));
             return result.IsValid
                 ? Results.Ok(result.Order)
                 : Results.Problem(statusCode: StatusCodes.Status400BadRequest, title: "Pedido invalido", detail: result.Error);
+        }).RequireAuthorization(Policies.Cliente);
+
+        // GET /orders/{id}: seguimiento. Solo el dueño del pedido; si es de otro usuario responde 404 (no revela que existe).
+        v1.MapGet("/orders/{id:guid}", async (Guid id, HttpContext http, CheckoutService checkout, CancellationToken ct) =>
+        {
+            var userId = http.User.FindFirst("sub")?.Value ?? http.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId)) return Results.Unauthorized();
+            return await checkout.GetAsync(userId, id, ct) is { } order
+                ? Results.Ok(order)
+                : Results.Problem(statusCode: StatusCodes.Status404NotFound, title: "Pedido no encontrado", detail: $"No existe el pedido {id}.");
         }).RequireAuthorization(Policies.Cliente);
         return v1;
     }

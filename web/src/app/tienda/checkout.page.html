@@ -1,0 +1,73 @@
+<h1>Finalizar compra</h1>
+<app-checkout-steps [current]="step()" />
+
+@if (!cart.count()) {
+  <div class="empty card">
+    <h2>Tu carrito está vacío</h2>
+    <a class="btn" routerLink="/tienda">Ir al catálogo</a>
+  </div>
+} @else {
+  <div class="two">
+    <div class="card">
+      @switch (step()) {
+        @case (1) {
+          <h2>1. Revisá tu carrito</h2>
+          <table>
+            <thead><tr><th>Producto</th><th>Precio</th><th>Cant.</th><th>Subtotal</th></tr></thead>
+            <tbody>
+              @for (l of cart.lines(); track l.productId) {
+                <tr>
+                  <td>{{ l.name }}</td>
+                  <td>{{ l.priceCents | money }}</td>
+                  <td>{{ l.quantity }}</td>
+                  <td>{{ l.priceCents * l.quantity | money }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+          <p><a routerLink="/tienda/carrito">Modificar el carrito</a></p>
+        }
+        @case (2) {
+          <h2>2. Datos del comprador</h2>
+          <p class="muted">Compraste con la cuenta con la que iniciaste sesión.</p>
+          <dl>
+            <dt>Nombre</dt><dd>{{ auth.fullName() || auth.username() }}</dd>
+            @if (auth.email()) {
+              <dt>Email</dt><dd>{{ auth.email() }}</dd>
+            }
+            <dt>Usuario</dt><dd>{{ auth.username() }}</dd>
+          </dl>
+        }
+        @case (3) {
+          <h2>3. Pago</h2>
+          <p><strong>Pago simulado.</strong> No se cobra dinero real ni se piden datos de tarjeta.</p>
+          <p class="muted">Al confirmar, el sistema simula el cobro y te informa si fue aprobado o rechazado.</p>
+        }
+        @case (4) {
+          <h2>4. Confirmá tu compra</h2>
+          <p>Vas a comprar <strong>{{ cart.count() }}</strong> {{ cart.count() === 1 ? 'producto' : 'productos' }} por <strong>{{ cart.totalCents() | money }}</strong>.</p>
+          <p class="muted">Comprador: {{ auth.fullName() || auth.username() }}. Pago simulado.</p>
+        }
+      }
+
+      <p class="err" role="alert">{{ error() }}</p>
+
+      <div class="nav">
+        <button class="btn o" type="button" [disabled]="step() === 1 || sending()" (click)="go(-1)">Atrás</button>
+        @if (step() < 4) {
+          <button class="btn" type="button" (click)="go(1)">Siguiente</button>
+        } @else {
+          <button class="btn" type="button" [disabled]="sending()" (click)="confirm()">
+            {{ sending() ? 'Procesando…' : 'Confirmar compra' }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <aside class="card">
+      <h4>Resumen</h4>
+      <p class="muted">Productos: {{ cart.count() }}</p>
+      <p class="total">Total {{ cart.totalCents() | money }}</p>
+    </aside>
+  </div>
+}

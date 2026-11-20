@@ -1,0 +1,58 @@
+<h1>Seguimiento del pedido</h1>
+<app-checkout-steps [current]="5" />
+
+@if (loading()) {
+  <div class="card skel" aria-busy="true"></div>
+} @else if (notFound()) {
+  <div class="empty card">
+    <h2>Pedido no encontrado</h2>
+    <p class="muted">No existe o no pertenece a tu cuenta.</p>
+    <a class="btn" routerLink="/tienda">Ir al catálogo</a>
+  </div>
+} @else if (error()) {
+  <div class="empty card">
+    <p class="err" role="alert">{{ error() }}</p>
+    <button class="btn" type="button" (click)="start(id())">Reintentar</button>
+  </div>
+} @else if (order(); as o) {
+  <div class="card">
+    <div class="head">
+      <span class="badge" [class]="'badge ' + o.status.toLowerCase()">{{ o.status }}</span>
+      <span class="muted">Pedido {{ o.id }}</span>
+    </div>
+
+    @switch (o.status) {
+      @case ('Confirmado') { <p>¡Tu compra fue confirmada!</p> }
+      @case ('Pendiente') { <p>Estamos procesando tu pedido{{ waiting() ? '…' : '. Actualizá en unos instantes.' }}</p> }
+      @case ('Rechazado') { <p class="err">No pudimos completar tu compra. {{ reasonText(o) }}</p> }
+      @case ('Entregado') { <p>Tu pedido fue entregado.</p> }
+      @case ('Cancelado') { <p>El pedido fue cancelado.</p> }
+    }
+
+    <p class="muted">
+      {{ o.createdAt | date: 'dd/MM/yyyy HH:mm' }}@if (o.buyerName) { · Comprador: {{ o.buyerName }} }
+    </p>
+
+    <table>
+      <thead><tr><th>Producto</th><th>Precio</th><th>Cant.</th><th>Subtotal</th></tr></thead>
+      <tbody>
+        @for (l of o.items; track l.productId) {
+          <tr>
+            <td>{{ l.productName }}</td>
+            <td>{{ l.unitPriceCents | money }}</td>
+            <td>{{ l.quantity }}</td>
+            <td>{{ l.unitPriceCents * l.quantity | money }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+    <p class="total">Total {{ o.totalCents | money }}</p>
+
+    <div class="nav">
+      <a class="btn o" routerLink="/tienda">Seguir comprando</a>
+      @if (o.status === 'Rechazado') {
+        <a class="btn" routerLink="/tienda/carrito">Volver al carrito</a>
+      }
+    </div>
+  </div>
+}
