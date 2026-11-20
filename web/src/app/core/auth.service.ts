@@ -42,7 +42,7 @@ export class AuthService {
   }
 
   login(redirectPath?: string): Promise<void> {
-    return this.kc.login({ redirectUri: window.location.origin + (redirectPath ?? window.location.pathname) });
+    return this.kc.login({ redirectUri: window.location.origin + (redirectPath ?? window.location.pathname + window.location.search) });
   }
 
   logout(): Promise<void> {

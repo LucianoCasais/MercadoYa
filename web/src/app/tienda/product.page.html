@@ -38,6 +38,9 @@
         <button class="btn o w" type="button" disabled>Sin stock</button>
       }
       <p class="err" role="alert">{{ notice() }}</p>
+      @if (needLogin() && !auth.authenticated()) {
+        <button class="btn sm" type="button" (click)="auth.login()">Iniciar sesión</button>
+      }
     </div>
   </div>
 }

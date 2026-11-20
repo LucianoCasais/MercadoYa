@@ -1,6 +1,9 @@
 <h1>Catálogo</h1>
 <input class="search" type="search" placeholder="Buscar productos" aria-label="Buscar productos" [(ngModel)]="search" (ngModelChange)="onSearch()" />
 <p class="err" role="alert">{{ error() }}{{ notice() }}</p>
+@if (needLogin() && !auth.authenticated()) {
+  <button class="btn sm" type="button" (click)="auth.login()">Iniciar sesión</button>
+}
 
 @if (loading()) {
   <div class="grid" aria-busy="true">
