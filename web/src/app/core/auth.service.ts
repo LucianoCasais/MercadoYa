@@ -13,6 +13,8 @@ export class AuthService {
   private readonly _roles = signal<string[]>([]);
   private readonly _username = signal('');
   private readonly _userId = signal('');
+  private readonly _fullName = signal('');
+  private readonly _email = signal('');
 
   readonly ready = this._ready.asReadonly();
   readonly authenticated = this._authenticated.asReadonly();
@@ -20,6 +22,9 @@ export class AuthService {
   readonly username = this._username.asReadonly();
   /** Identificador estable del usuario (claim `sub`); vacio si no hay sesion. */
   readonly userId = this._userId.asReadonly();
+  /** Nombre completo y email de la cuenta (vienen en el token de Keycloak); vacios si no hay sesion. */
+  readonly fullName = this._fullName.asReadonly();
+  readonly email = this._email.asReadonly();
   readonly isAdmin = computed(() => this._roles().includes('admin'));
   readonly isCliente = computed(() => this._roles().includes('cliente'));
 
@@ -65,6 +70,10 @@ export class AuthService {
     this._authenticated.set(!!this.kc.authenticated);
     this._roles.set(this.kc.tokenParsed?.realm_access?.roles ?? []);
     this._userId.set(this.kc.authenticated ? (this.kc.tokenParsed?.sub ?? '') : '');
+    const t = this.kc.tokenParsed as Record<string, unknown> | undefined;
+    const full = (t?.['name'] as string | undefined) || `${t?.['given_name'] ?? ''} ${t?.['family_name'] ?? ''}`.trim();
+    this._fullName.set(this.kc.authenticated ? full : '');
+    this._email.set(this.kc.authenticated ? ((t?.['email'] as string | undefined) ?? '') : '');
     this._username.set((this.kc.tokenParsed?.['preferred_username'] as string | undefined) ?? '');
   }
 }

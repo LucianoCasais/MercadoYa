@@ -6,6 +6,8 @@ public sealed class Order
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public string UserId { get; set; } = "";
+    /// Nombre de quien compra, copiado del token al crear el pedido (queda congelado, como los precios).
+    public string BuyerName { get; set; } = "";
     public OrderStatus Status { get; private set; } = OrderStatus.Pendiente;
     public RejectionReason? Reason { get; private set; }
     public long TotalCents { get; set; }

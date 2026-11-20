@@ -50,6 +50,7 @@ CREATE TABLE catalogo."StockReservation" (
 CREATE TABLE pedidos."Order" (
   "Id"             uuid PRIMARY KEY,
   "UserId"         varchar(64) NOT NULL,                 -- claim `sub` de Keycloak
+  "BuyerName"      varchar(150) NOT NULL DEFAULT '',      -- nombre de quien compra, copiado del token al comprar
   "Status"         varchar(12) NOT NULL CHECK ("Status" IN ('Pendiente','Confirmado','Rechazado','Entregado','Cancelado')),
   "Reason"         varchar(20) CHECK ("Reason" IN ('SinStock','StockNoDisponible','PagoFallido','PagoNoDisponible','BrokerNoDisponible')),
   "TotalCents"     bigint NOT NULL CHECK ("TotalCents" >= 0),
