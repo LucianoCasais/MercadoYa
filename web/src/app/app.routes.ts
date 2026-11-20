@@ -20,7 +20,7 @@ export const routes: Routes = [
   {
     path: 'admin',
     canActivate: [roleGuard('admin')],
-    loadComponent: () => import('./admin/admin.page').then((m) => m.AdminPage),
+    loadChildren: () => import('./admin/admin.routes').then((m) => m.ADMIN_ROUTES),
   },
   { path: '403', loadComponent: () => import('./shared/forbidden.page').then((m) => m.ForbiddenPage) },
   { path: '**', redirectTo: 'tienda' },

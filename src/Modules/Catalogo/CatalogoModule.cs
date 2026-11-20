@@ -1,3 +1,4 @@
+using MercadoYa.Shared;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -40,7 +41,7 @@ public static class CatalogoModule
     {
         v1.MapGet("/products", async (CatalogoDbContext db, string? search, int? categoryId, CancellationToken ct, int page = 1, int pageSize = 12) =>
         {
-            page = Math.Max(page, 1); pageSize = pageSize is < 1 or > 50 ? 12 : pageSize;
+            (page, pageSize) = Paging.Normalize(page, pageSize, defaultSize: 12, maxSize: 50);
             var q = db.Products.AsNoTracking().Where(p => p.Active);
             if (!string.IsNullOrWhiteSpace(search)) { var t = search.Trim().ToLower(); q = q.Where(p => p.Name.ToLower().Contains(t)); }
             if (categoryId is int cid)   // incluye todas las subcategorias y hojas descendientes

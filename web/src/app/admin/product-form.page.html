@@ -1,0 +1,84 @@
+<nav class="crumb"><a routerLink="/admin/productos">← Productos</a></nav>
+<h1>{{ isEdit ? 'Editar producto' : 'Nuevo producto' }}</h1>
+
+@if (notFound()) {
+  <div class="empty card">
+    <h2>Producto no encontrado</h2>
+    <a class="btn" routerLink="/admin/productos">Volver al listado</a>
+  </div>
+} @else if (loading()) {
+  <div class="card skel" aria-busy="true"></div>
+} @else {
+  <form class="card f" [formGroup]="form" (ngSubmit)="save()" novalidate>
+    <div class="fld">
+      <label for="name">Nombre *</label>
+      <input id="name" formControlName="name" [maxlength]="limits.name" autocomplete="off" [attr.aria-invalid]="invalid('name')" aria-describedby="name-e" />
+      <span class="err" id="name-e">{{ msg('name') }}</span>
+    </div>
+
+    <div class="fld">
+      <label for="description">Descripción</label>
+      <textarea id="description" formControlName="description" rows="3" [maxlength]="limits.description" [attr.aria-invalid]="invalid('description')" aria-describedby="description-e"></textarea>
+      <span class="err" id="description-e">{{ msg('description') }}</span>
+    </div>
+
+    <div class="row">
+      <div class="fld">
+        <label for="price">Precio ($) *</label>
+        <input id="price" type="number" step="0.01" min="0.01" inputmode="decimal" formControlName="price" [attr.aria-invalid]="invalid('price')" aria-describedby="price-e" />
+        <span class="err" id="price-e">{{ msg('price') }}</span>
+      </div>
+
+      @if (isEdit) {
+        <div class="fld">
+          <span class="lbl">Stock actual</span>
+          <p class="ro">{{ stock() }} unidades <span class="muted">· se ajusta desde el listado</span></p>
+        </div>
+      } @else {
+        <div class="fld">
+          <label for="initialStock">Stock inicial *</label>
+          <input id="initialStock" type="number" step="1" min="0" formControlName="initialStock" [attr.aria-invalid]="invalid('initialStock')" aria-describedby="initialStock-e" />
+          <span class="err" id="initialStock-e">{{ msg('initialStock') }}</span>
+        </div>
+      }
+    </div>
+
+    <div class="fld">
+      <label for="categoryId">Categoría *</label>
+      <select id="categoryId" formControlName="categoryId" [attr.aria-invalid]="invalid('categoryId')" aria-describedby="categoryId-e">
+        <option [ngValue]="null" disabled>Elegí una categoría</option>
+        @for (c of categories(); track c.id) {
+          <option [ngValue]="c.id">{{ c.path }}</option>
+        }
+      </select>
+      <span class="err" id="categoryId-e">{{ msg('categoryId') }}</span>
+    </div>
+
+    <div class="fld">
+      <label for="imageUrl">URL de la imagen</label>
+      <input id="imageUrl" type="url" formControlName="imageUrl" placeholder="https://…" [maxlength]="limits.imageUrl" [attr.aria-invalid]="invalid('imageUrl')" aria-describedby="imageUrl-e" />
+      <span class="err" id="imageUrl-e">{{ msg('imageUrl') }}</span>
+      @if (previewUrl(); as url) {
+        <img class="prev" [src]="url" alt="Vista previa de la imagen" />
+      }
+    </div>
+
+    @if (isEdit) {
+      <label class="chk"><input type="checkbox" formControlName="active" /> Activo (visible en la tienda)</label>
+    }
+
+    @if (error()) {
+      <p class="err" role="alert">
+        {{ error() }}
+        @if (conflict()) {
+          <button class="btn o sm" type="button" (click)="loadProduct()">Recargar el producto</button>
+        }
+      </p>
+    }
+
+    <div class="nav">
+      <a class="btn o" routerLink="/admin/productos">Cancelar</a>
+      <button class="btn" type="submit" [disabled]="saving()">{{ saving() ? 'Guardando…' : isEdit ? 'Guardar cambios' : 'Crear producto' }}</button>
+    </div>
+  </form>
+}

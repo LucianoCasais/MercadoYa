@@ -54,15 +54,22 @@ Exchange `orders` → cola `orders` (quorum, `x-delivery-limit` 5) con DLX `orde
 | Proyecto | Responsabilidad | Estado |
 |---|---|---|
 | `MercadoYa.Shared` | Roles, políticas, contratos del mensaje y validación JWT con Keycloak | Listo |
-| `Modules/Catalogo` | Productos y árbol de categorías; listado con búsqueda, filtro por `categoryId` (incluye descendientes), paginación y detalle públicos | Lectura lista; falta ABM y caché |
-| `Modules/Inventario` | Reserva atómica e idempotente, liberación y endpoints internos de stock | Lista; falta PATCH de stock |
+| `Modules/Catalogo` | Productos y árbol de categorías; listado con búsqueda, filtro por `categoryId` (incluye descendientes), paginación y detalle públicos | Lectura y ABM admin (`/api/v1/admin/products`, baja lógica) listos; falta caché (día 9) |
+| `Modules/Inventario` | Reserva atómica e idempotente, liberación, endpoints internos de stock y ajuste del admin (`PATCH /api/v1/admin/products/{id}/stock`, registra `StockMovement`) | Listo |
 | `Modules/Pedidos` | Entidades, máquina de estados y `DbContext` | Falta POST/GET de pedidos |
 | `MercadoYa.Api` | Host REST `/api/v1`, Swagger, health checks, CORS | Esqueleto |
 | `MercadoYa.Worker` | Orquestador de la SAGA | Solo documentado (días 8 a 10) |
 | `MercadoYa.Payments` | Servicio gRPC de cobro simulado e idempotente | Listo; rechaza importes con `amount_cents % 1000 == 999` |
-| `tests/MercadoYa.Tests` | xUnit: máquina de estados del pedido | Primeras pruebas |
+| `tests/MercadoYa.Tests` | xUnit: máquina de estados, checkout, validaciones y `StockService` contra PostgreSQL real (Testcontainers) | En curso |
 
 Contratos en `contracts/` (`payments.proto`, `order-requested.json`).
+
+## Tests
+
+```bash
+dotnet test                                        # todos (los de stock levantan un PostgreSQL 16 descartable: requiere Docker)
+dotnet test --filter "Category!=Integracion"       # solo los que no necesitan Docker
+```
 
 ## Pendiente
 
