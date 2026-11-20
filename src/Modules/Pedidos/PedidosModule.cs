@@ -27,7 +27,7 @@ public sealed class PedidosDbContext(DbContextOptions<PedidosDbContext> options)
 }
 
 /// Persistencia de pedidos con EF Core. La unicidad de (UserId, IdempotencyKey) la garantiza el indice unico de la BD.
-public sealed class EfOrderRepository(PedidosDbContext db) : IOrderRepository
+public sealed class EfOrderRepository(PedidosDbContext db) : IOrderRepository, IAdminOrderRepository
 {
     public Task<Order?> FindByKeyAsync(string userId, string idempotencyKey, CancellationToken ct) =>
         db.Orders.Include(o => o.Items).FirstOrDefaultAsync(o => o.UserId == userId && o.IdempotencyKey == idempotencyKey, ct);
@@ -51,6 +51,20 @@ public sealed class EfOrderRepository(PedidosDbContext db) : IOrderRepository
     }
 
     public Task SaveAsync(CancellationToken ct) => db.SaveChangesAsync(ct);
+
+    // ---- IAdminOrderRepository (panel de admin: pedidos de cualquier usuario) ----
+    public async Task<(IReadOnlyList<Order> Items, int Total)> ListAsync(OrderStatus? status, int page, int pageSize, CancellationToken ct)
+    {
+        var q = db.Orders.AsNoTracking().AsQueryable();
+        if (status is { } s) q = q.Where(o => o.Status == s);
+        var total = await q.CountAsync(ct);
+        var items = await q.Include(o => o.Items).OrderByDescending(o => o.CreatedAt).ThenBy(o => o.Id)
+            .Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(ct);
+        return (items, total);
+    }
+
+    public Task<Order?> FindAsync(Guid orderId, CancellationToken ct) =>
+        db.Orders.Include(o => o.Items).FirstOrDefaultAsync(o => o.Id == orderId, ct);
 }
 
 public static class PedidosModule
@@ -60,10 +74,12 @@ public static class PedidosModule
     public static IServiceCollection AddPedidosModule(this IServiceCollection s, string cs) =>
         s.AddDbContext<PedidosDbContext>(o => o.UseNpgsql(cs))
          .AddScoped<IOrderRepository, EfOrderRepository>()
+         .AddScoped<IAdminOrderRepository, EfOrderRepository>()
+         .AddScoped<AdminOrderService>()
          .AddScoped<IStockClient, FakeStockClient>()
          .AddScoped<IPaymentGateway, FakePaymentGateway>()
          .AddScoped<CheckoutService>();
 
-    /// GET /orders/{id} ya esta (adelantado del dia 5 para el seguimiento). TODO (dias 11-12): admin de pedidos. TODO (dia 8): POST /orders pasa a 202 y publica OrderRequested.
-    public static IEndpointRouteBuilder MapPedidosEndpoints(this IEndpointRouteBuilder v1) => v1.MapCheckoutEndpoints();
+    /// GET /orders/{id} ya esta (adelantado del dia 5 para el seguimiento). Admin de pedidos: dia 6. TODO (dia 8): POST /orders pasa a 202 y publica OrderRequested.
+    public static IEndpointRouteBuilder MapPedidosEndpoints(this IEndpointRouteBuilder v1) => v1.MapCheckoutEndpoints().MapAdminOrderEndpoints();
 }
