@@ -4,6 +4,13 @@ option csharp_namespace = "MercadoYa.Payments.Grpc";
 package payments.v1;
 
 // Cobro simulado e idempotente por order_id: repetir devuelve el mismo resultado.
+// Solo lo puede llamar el client de servicio orders-worker (Bearer de Keycloak con azp = orders-worker).
+// Codigos de error:
+//   INVALID_ARGUMENT     order_id no es un GUID o amount_cents <= 0 (no reintentar)
+//   FAILED_PRECONDITION  el pedido ya se cobro por otro importe (no reintentar)
+//   UNAVAILABLE          la base de pagos no responde (transitorio: reintentar)
+//   UNAUTHENTICATED      falta el token o no es valido
+//   PERMISSION_DENIED    el token no es del client orders-worker
 service Payments {
   rpc ChargeOrder (ChargeOrderRequest) returns (ChargeOrderReply);
 }

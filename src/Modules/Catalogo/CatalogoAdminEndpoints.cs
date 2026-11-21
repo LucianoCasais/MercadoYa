@@ -17,7 +17,7 @@ public static class CatalogoAdminEndpoints
         // Listado del panel: incluye inactivos (para poder reactivarlos) y busca por nombre.
         g.MapGet("", async (CatalogoDbContext db, string? search, CancellationToken ct, int page = 1, int pageSize = 20) =>
         {
-            page = Math.Max(page, 1); pageSize = pageSize is < 1 or > 100 ? 20 : pageSize;
+            (page, pageSize) = Paging.Normalize(page, pageSize, defaultSize: 20, maxSize: 100);
             var q = db.Products.AsNoTracking();
             if (!string.IsNullOrWhiteSpace(search)) { var t = search.Trim().ToLower(); q = q.Where(p => p.Name.ToLower().Contains(t)); }
             var total = await q.CountAsync(ct);

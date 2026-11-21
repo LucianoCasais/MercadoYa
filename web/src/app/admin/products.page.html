@@ -1,0 +1,75 @@
+<div class="bar">
+  <h1>Productos</h1>
+  <a class="btn" routerLink="nuevo">Nuevo producto</a>
+</div>
+<input class="search" type="search" placeholder="Buscar por nombre" aria-label="Buscar producto" [(ngModel)]="search" (ngModelChange)="onSearch()" />
+
+@if (notice(); as n) {
+  <p [class]="n.ok ? 'ok' : 'err'" role="status">{{ n.text }}</p>
+}
+
+@if (loading()) {
+  <div class="card skel" aria-busy="true"></div>
+} @else if (error()) {
+  <div class="empty card">
+    <p class="err" role="alert">{{ error() }}</p>
+    <button class="btn" type="button" (click)="load()">Reintentar</button>
+  </div>
+} @else if (!result()?.items?.length) {
+  <div class="empty card">
+    <h2>No hay productos</h2>
+    <p class="muted">{{ search.trim() ? 'Probá con otra búsqueda.' : 'Cargá el primero con "Nuevo producto".' }}</p>
+  </div>
+} @else {
+  <div class="card tw">
+    <table>
+      <thead>
+        <tr><th>Nombre</th><th>Categoría</th><th class="num">Precio</th><th class="num">Stock</th><th>Estado</th><th>Acciones</th></tr>
+      </thead>
+      <tbody>
+        @for (p of result()!.items; track p.id) {
+          <tr [class.off]="!p.active">
+            <td>{{ p.name }}</td>
+            <td class="muted">{{ categoryPath().get(p.categoryId) ?? '#' + p.categoryId }}</td>
+            <td class="num">{{ p.priceCents | money }}</td>
+            <td class="num" [class.low]="p.stock === 0">{{ p.stock }}</td>
+            <td><span class="tag" [class.t-ok]="p.active" [class.t-no]="!p.active">{{ p.active ? 'Activo' : 'Inactivo' }}</span></td>
+            <td class="acts">
+              <a class="btn o sm" [routerLink]="[p.id]">Editar</a>
+              <button class="btn o sm" type="button" [disabled]="busyId() === p.id" (click)="openAdjust(p)" [attr.aria-expanded]="adjustingId() === p.id">
+                Ajustar stock
+              </button>
+              @if (p.active) {
+                <button class="btn o sm" type="button" [disabled]="busyId() === p.id" (click)="deactivate(p)">Dar de baja</button>
+              } @else {
+                <button class="btn o sm" type="button" [disabled]="busyId() === p.id" (click)="reactivate(p)">Reactivar</button>
+              }
+            </td>
+          </tr>
+          @if (adjustingId() === p.id) {
+            <tr class="adj">
+              <td colspan="6">
+                <form class="adj-f" (ngSubmit)="applyAdjust(p)">
+                  <label [for]="'delta-' + p.id">Ajuste de stock de <b>{{ p.name }}</b> (actual: {{ p.stock }})</label>
+                  <input [id]="'delta-' + p.id" name="delta" type="number" step="1" placeholder="Ej.: 10 o -2"
+                    [(ngModel)]="delta" [attr.aria-invalid]="!!deltaError()" [attr.aria-describedby]="'delta-err-' + p.id" />
+                  <button class="btn sm" type="submit" [disabled]="busyId() === p.id">Aplicar</button>
+                  <button class="btn o sm" type="button" (click)="openAdjust(p)">Cancelar</button>
+                  @if (delta !== null && !deltaError() && validateDelta(p) === '') {
+                    <span class="muted">Quedará en {{ p.stock + delta }}</span>
+                  }
+                  <span class="err" [id]="'delta-err-' + p.id" role="alert">{{ deltaError() }}</span>
+                </form>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+  <div class="pager">
+    <button class="btn o sm" type="button" [disabled]="page() <= 1" (click)="go(-1)">Anterior</button>
+    Página {{ page() }} de {{ pages }} · {{ result()!.total }} productos
+    <button class="btn o sm" type="button" [disabled]="page() >= pages" (click)="go(1)">Siguiente</button>
+  </div>
+}

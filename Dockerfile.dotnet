@@ -1,12 +1,28 @@
+# Imagen de los servicios .NET (api, worker, payments). docker-compose elige cual con el argumento PROJECT.
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG PROJECT
 WORKDIR /repo
-COPY . .
-RUN dotnet publish src/${PROJECT}/${PROJECT}.csproj -c Release -o /out
+# Primero solo los .csproj y el .proto: el restore queda en una capa cacheada y no se repite si solo cambia el codigo.
+# Si se agrega un proyecto a src/, sumar aca su .csproj (si falta, el restore falla avisando que no lo encuentra).
+COPY src/Directory.Build.props src/
+COPY src/MercadoYa.Shared/*.csproj src/MercadoYa.Shared/
+COPY src/MercadoYa.Api/*.csproj src/MercadoYa.Api/
+COPY src/MercadoYa.Worker/*.csproj src/MercadoYa.Worker/
+COPY src/MercadoYa.Payments/*.csproj src/MercadoYa.Payments/
+COPY src/Modules/Catalogo/*.csproj src/Modules/Catalogo/
+COPY src/Modules/Inventario/*.csproj src/Modules/Inventario/
+COPY src/Modules/Pedidos/*.csproj src/Modules/Pedidos/
+COPY contracts/ contracts/
+RUN dotnet restore src/${PROJECT}/${PROJECT}.csproj
+COPY src/ src/
+RUN dotnet publish src/${PROJECT}/${PROJECT}.csproj -c Release -o /out --no-restore
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
 ARG PROJECT
 ENV PROJECT=${PROJECT} ASPNETCORE_URLS=http://+:8080
 WORKDIR /app
 COPY --from=build /out .
-ENTRYPOINT ["sh", "-c", "dotnet ${PROJECT}.dll"]
+# Usuario sin privilegios que trae la imagen oficial (los puertos 8080/8081 no necesitan root).
+USER $APP_UID
+# exec: el proceso .NET reemplaza al shell y recibe la senal de `docker stop` (apagado limpio, sin esperar el timeout).
+ENTRYPOINT ["sh", "-c", "exec dotnet ${PROJECT}.dll"]

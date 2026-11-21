@@ -80,6 +80,6 @@ public static class PedidosModule
          .AddScoped<IPaymentGateway, FakePaymentGateway>()
          .AddScoped<CheckoutService>();
 
-    /// GET /orders/{id} ya esta (adelantado del dia 5 para el seguimiento). Admin de pedidos: dia 6. TODO (dia 8): POST /orders pasa a 202 y publica OrderRequested.
+    /// GET /orders/{id} ya esta (adelantado del dia 5 para el seguimiento). Admin de pedidos: dia 6. POST /orders: modo Async (dia 8) en Checkout:Mode.
     public static IEndpointRouteBuilder MapPedidosEndpoints(this IEndpointRouteBuilder v1) => v1.MapCheckoutEndpoints().MapAdminOrderEndpoints();
 }

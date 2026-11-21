@@ -54,7 +54,13 @@ public sealed class StockService(InventarioDbContext db)
             {
                 var rows = await db.Database.ExecuteSqlInterpolatedAsync(
                     $"""UPDATE catalogo."Product" SET "Stock" = "Stock" - {i.Quantity} WHERE "Id" = {i.ProductId} AND "Active" AND "Stock" >= {i.Quantity}""", ct);
-                if (rows == 0) { await tx.RollbackAsync(ct); return ReserveResult.InsufficientStock; }
+                if (rows == 0)
+                {
+                    await tx.RollbackAsync(ct);
+                    // Si otra request del MISMO pedido gano la carrera y ya reservo (reentrega o doble envio), no es falta de stock:
+                    // el stock que no alcanza es el que ella ya descontó. Se informa como ya reservado (idempotente).
+                    return await db.Reservations.AnyAsync(r => r.OrderId == orderId, ct) ? ReserveResult.AlreadyReserved : ReserveResult.InsufficientStock;
+                }
                 db.Reservations.Add(new StockReservation { OrderId = orderId, ProductId = i.ProductId, Quantity = i.Quantity });
                 db.Movements.Add(new StockMovement { ProductId = i.ProductId, Delta = -i.Quantity, Reason = "Venta", OrderId = orderId });
             }
@@ -68,20 +74,23 @@ public sealed class StockService(InventarioDbContext db)
         }
     }
 
-    /// Libera lo reservado por el pedido. Idempotente: solo actua sobre reservas en estado Reservada.
-    public async Task ReleaseAsync(Guid orderId, string reason, CancellationToken ct)
-    {
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
-        var reservations = await db.Reservations.Where(r => r.OrderId == orderId && r.Status == "Reservada").ToListAsync(ct);
-        foreach (var r in reservations)
-        {
-            await db.Database.ExecuteSqlInterpolatedAsync($"""UPDATE catalogo."Product" SET "Stock" = "Stock" + {r.Quantity} WHERE "Id" = {r.ProductId}""", ct);
-            r.Status = "Liberada";
-            db.Movements.Add(new StockMovement { ProductId = r.ProductId, Delta = r.Quantity, Reason = reason, OrderId = orderId });
-        }
-        await db.SaveChangesAsync(ct);
-        await tx.CommitAsync(ct);
-    }
+    /// Libera lo reservado por el pedido. Idempotente Y seguro ante llamadas simultaneas (por ejemplo la cancelacion del admin
+    /// junto a la compensacion del worker): una sola sentencia marca las reservas Reservada -> Liberada y devuelve el stock solo
+    /// de las filas que ella misma cambio, asi que la segunda llamada no encuentra nada que liberar. Leer y despues escribir
+    /// desde EF permitia que dos llamadas leyeran "Reservada" a la vez y devolvieran el stock dos veces.
+    public async Task ReleaseAsync(Guid orderId, string reason, CancellationToken ct) =>
+        await db.Database.ExecuteSqlInterpolatedAsync($"""
+            WITH released AS (
+                UPDATE catalogo."StockReservation" SET "Status" = 'Liberada'
+                WHERE "OrderId" = {orderId} AND "Status" = 'Reservada'
+                RETURNING "ProductId", "Quantity"),
+            restocked AS (
+                UPDATE catalogo."Product" p SET "Stock" = p."Stock" + r."Quantity"
+                FROM released r WHERE p."Id" = r."ProductId"
+                RETURNING p."Id")
+            INSERT INTO catalogo."StockMovement" ("ProductId", "Delta", "Reason", "OrderId")
+            SELECT "ProductId", "Quantity", {reason}, {orderId} FROM released
+            """, ct);
 
     public const int MaxAdjustDelta = 100_000;
 

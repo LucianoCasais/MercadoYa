@@ -2,11 +2,10 @@
   "profiles": {
     "MercadoYa.Payments": {
       "commandName": "Project",
-      "launchBrowser": true,
+      "launchBrowser": false,
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
-      },
-      "applicationUrl": "https://localhost:63372;http://localhost:63374"
+      }
     }
   }
 }
