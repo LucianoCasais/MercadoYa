@@ -1,0 +1,14 @@
+# Contexto de build de Dockerfile.dotnet (api, worker, payments): solo hace falta src/, contracts/ y la solucion.
+# Sin esto se copian bin/ y obj/ de Windows (rutas locales que rompen el restore) y node_modules de la web.
+**/bin/
+**/obj/
+**/node_modules/
+web/
+tests/
+docs/
+infra/
+.git/
+.vs/
+.vscode/
+.env
+*.user

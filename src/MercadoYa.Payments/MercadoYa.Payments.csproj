@@ -2,11 +2,13 @@
   <ItemGroup>
     <PackageReference Include="Grpc.AspNetCore" Version="2.*" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.*" />
+    <PackageReference Include="AspNetCore.HealthChecks.NpgSql" Version="9.*" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../MercadoYa.Shared/MercadoYa.Shared.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <Protobuf Include="../../contracts/payments.proto" GrpcServices="Server" />
+    <!-- Server: el servicio. Client: lo usan los tests de integracion para llamarlo como lo hara el worker. -->
+    <Protobuf Include="../../contracts/payments.proto" GrpcServices="Both" />
   </ItemGroup>
 </Project>

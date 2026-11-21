@@ -59,7 +59,7 @@ Exchange `orders` → cola `orders` (quorum, `x-delivery-limit` 5) con DLX `orde
 | `Modules/Pedidos` | Entidades, máquina de estados y `DbContext` | Falta POST/GET de pedidos |
 | `MercadoYa.Api` | Host REST `/api/v1`, Swagger, health checks, CORS | Esqueleto |
 | `MercadoYa.Worker` | Orquestador de la SAGA | Solo documentado (días 8 a 10) |
-| `MercadoYa.Payments` | Servicio gRPC de cobro simulado e idempotente | Listo; rechaza importes con `amount_cents % 1000 == 999` |
+| `MercadoYa.Payments` | Servicio gRPC de cobro simulado e idempotente, con BD propia; solo acepta el token de servicio de `orders-worker` (client credentials) | Listo. gRPC en `localhost:5003` (local y Docker); health checks en `localhost:5004` con `dotnet run` (en Docker, solo dentro del contenedor). Rechaza importes con `amount_cents % 1000 == 999` (por ejemplo un producto de $ 9,99) |
 | `tests/MercadoYa.Tests` | xUnit: máquina de estados, checkout, validaciones y `StockService` contra PostgreSQL real (Testcontainers) | En curso |
 
 Contratos en `contracts/` (`payments.proto`, `order-requested.json`).

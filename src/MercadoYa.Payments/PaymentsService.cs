@@ -2,51 +2,48 @@ using Grpc.Core;
 using MercadoYa.Payments.Grpc;
 using MercadoYa.Shared;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace MercadoYa.Payments;
 
-public sealed class PaymentRecord
-{
-    public Guid Id { get; set; } = Guid.NewGuid(); public Guid OrderId { get; set; } public long AmountCents { get; set; }
-    public string Status { get; set; } = ""; public string? Reason { get; set; } public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
-}
-
-public sealed class PaymentsDbContext(DbContextOptions<PaymentsDbContext> options) : DbContext(options)
-{
-    public DbSet<PaymentRecord> Payments => Set<PaymentRecord>();
-    protected override void OnModelCreating(ModelBuilder m) =>
-        m.Entity<PaymentRecord>(e => { e.ToTable("PaymentRecord"); e.HasIndex(x => x.OrderId).IsUnique(); });
-}
-
-/// Cobro simulado e idempotente por order_id. Regla de simulacion para pruebas: importes cuyos centavos
-/// terminan en 999 (amount_cents % 1000 == 999) se rechazan; el resto se aprueba.
+/// Adaptador gRPC de contracts/payments.proto. Solo traduce: valida la request, llama a PaymentProcessor y convierte
+/// cada situacion en un codigo gRPC que el worker pueda distinguir (reintentar o no):
+/// - InvalidArgument: order_id no es un GUID o amount_cents no es positivo (no tiene sentido reintentar).
+/// - FailedPrecondition: el pedido ya se cobro por otro importe (no reintentar).
+/// - Unavailable: la base de pagos no responde (transitorio: Polly puede reintentar).
+/// - Unauthenticated / PermissionDenied: sin token valido / token que no es del client orders-worker.
 [Authorize(Policy = Policies.Worker)]
-public sealed class PaymentsService(PaymentsDbContext db) : Grpc.Payments.PaymentsBase
+public sealed class PaymentsService(PaymentProcessor processor, ILogger<PaymentsService> logger) : Grpc.Payments.PaymentsBase
 {
     public override async Task<ChargeOrderReply> ChargeOrder(ChargeOrderRequest request, ServerCallContext context)
     {
-        if (!Guid.TryParse(request.OrderId, out var orderId) || request.AmountCents <= 0)
-            throw new RpcException(new Status(StatusCode.InvalidArgument, "order_id o amount_cents invalidos"));
+        if (!Guid.TryParse(request.OrderId, out var orderId) || orderId == Guid.Empty)
+            throw new RpcException(new Status(StatusCode.InvalidArgument, "order_id debe ser un GUID valido."));
+        if (request.AmountCents <= 0)
+            throw new RpcException(new Status(StatusCode.InvalidArgument, "amount_cents debe ser mayor a 0."));
 
-        var existing = await db.Payments.AsNoTracking().FirstOrDefaultAsync(p => p.OrderId == orderId, context.CancellationToken);
-        if (existing is not null) return ToReply(existing);
-
-        var rejected = request.AmountCents % 1000 == 999;
-        var record = new PaymentRecord { OrderId = orderId, AmountCents = request.AmountCents,
-            Status = rejected ? "Rechazado" : "Aprobado", Reason = rejected ? "Pago simulado rechazado" : null };
-        db.Payments.Add(record);
-        try { await db.SaveChangesAsync(context.CancellationToken); }
-        catch (DbUpdateException)   // cobro concurrente del mismo pedido: devolver el ya registrado
+        try
         {
-            record = await db.Payments.AsNoTracking().FirstAsync(p => p.OrderId == orderId, context.CancellationToken);
+            var r = await processor.ChargeAsync(orderId, request.AmountCents, context.CancellationToken);
+            return new ChargeOrderReply { Status = r.Approved ? PaymentStatus.Aprobado : PaymentStatus.Rechazado, Reason = r.Reason ?? "" };
         }
-        return ToReply(record);
+        catch (PaymentConflictException ex)
+        {
+            logger.LogWarning("Cobro rechazado por importe distinto: {Message}", ex.Message);
+            throw new RpcException(new Status(StatusCode.FailedPrecondition, ex.Message));
+        }
+        catch (Exception ex) when (IsDatabaseUnavailable(ex) && !context.CancellationToken.IsCancellationRequested)
+        {
+            logger.LogError(ex, "Base de pagos no disponible al cobrar el pedido {OrderId}", orderId);
+            throw new RpcException(new Status(StatusCode.Unavailable, "La base de pagos no esta disponible. Reintentar."));
+        }
     }
 
-    private static ChargeOrderReply ToReply(PaymentRecord p) => new()
+    /// Falla de conexion o timeout con PostgreSQL (directa o envuelta por EF Core). Un error de datos no cuenta.
+    private static bool IsDatabaseUnavailable(Exception ex)
     {
-        Status = p.Status == "Aprobado" ? PaymentStatus.Aprobado : PaymentStatus.Rechazado,
-        Reason = p.Reason ?? ""
-    };
+        for (var e = ex; e is not null; e = e.InnerException)
+            if (e is NpgsqlException { IsTransient: true } or TimeoutException) return true;
+        return false;
+    }
 }
