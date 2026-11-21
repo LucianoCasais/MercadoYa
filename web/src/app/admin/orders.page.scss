@@ -1,0 +1,26 @@
+.bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; h1 { margin: 0; } }
+.filter { display: flex; align-items: center; gap: 8px;
+  select { padding: 6px 10px; border: 1px solid var(--line); border-radius: 6px; font: inherit; background: #fff; }
+}
+.ok { color: var(--brand-dark); margin: 8px 0; }
+.tw { overflow-x: auto; padding: 0; }
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+th { font-size: .85rem; color: var(--muted); font-weight: 600; }
+.num { text-align: right; white-space: nowrap; }
+code { font-size: .85rem; }
+.acts { white-space: nowrap; display: flex; gap: 6px; }
+.danger { color: var(--err); border-color: var(--err); &:hover:not(:disabled) { background: #fbeceb; } }
+.tag { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: .8rem; background: #f1f1f1; color: var(--muted); }
+.t-confirmado { background: #e3f2ea; color: var(--brand-dark); }
+.t-entregado { background: #dde8f7; color: #1f4b8f; }
+.t-pendiente { background: #fdf1d6; color: #8a5a00; }
+.t-rechazado, .t-cancelado { background: #fbeceb; color: var(--err); }
+.det td { background: #f8faf9; }
+.meta { margin: 0 0 8px; color: var(--muted); font-size: .9rem; }
+.items { max-width: 640px; background: #fff; border: 1px solid var(--line);
+  th, td { padding: 6px 10px; }
+  tfoot td { font-weight: 600; border-bottom: 0; }
+}
+.skel { height: 320px; background: linear-gradient(90deg, #eef2f0, #f8faf9, #eef2f0); }
+.pager { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 16px; flex-wrap: wrap; }

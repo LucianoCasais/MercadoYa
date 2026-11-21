@@ -1,0 +1,96 @@
+<div class="bar">
+  <h1>Pedidos</h1>
+  <div class="filter">
+    <label for="status">Estado</label>
+    <select id="status" [(ngModel)]="status" (ngModelChange)="onFilter()">
+      <option value="">Todos</option>
+      @for (s of statuses; track s) {
+        <option [value]="s">{{ s }}</option>
+      }
+    </select>
+    <button class="btn o sm" type="button" [disabled]="loading()" (click)="load()">Actualizar</button>
+  </div>
+</div>
+
+@if (notice(); as n) {
+  <p [class]="n.ok ? 'ok' : 'err'" role="status">{{ n.text }}</p>
+}
+
+@if (loading()) {
+  <div class="card skel" aria-busy="true"></div>
+} @else if (error()) {
+  <div class="empty card">
+    <p class="err" role="alert">{{ error() }}</p>
+    <button class="btn" type="button" (click)="load()">Reintentar</button>
+  </div>
+} @else if (!result()?.items?.length) {
+  <div class="empty card">
+    <h2>No hay pedidos</h2>
+    <p class="muted">{{ status ? 'No hay pedidos en estado ' + status + '.' : 'Todavía no se hizo ningún pedido.' }}</p>
+  </div>
+} @else {
+  <div class="card tw">
+    <table>
+      <thead>
+        <tr><th>Pedido</th><th>Comprador</th><th>Fecha</th><th class="num">Total</th><th>Estado</th><th>Acciones</th></tr>
+      </thead>
+      <tbody>
+        @for (o of result()!.items; track o.id) {
+          <tr>
+            <td><code>{{ shortId(o.id) }}</code></td>
+            <td>{{ o.buyerName || '—' }}</td>
+            <td class="muted">{{ o.createdAt | date: 'dd/MM/yyyy HH:mm' }}</td>
+            <td class="num">{{ o.totalCents | money }}</td>
+            <td><span class="tag" [class]="'tag t-' + o.status.toLowerCase()">{{ o.status }}</span></td>
+            <td class="acts">
+              <button class="btn o sm" type="button" (click)="toggle(o)" [attr.aria-expanded]="openId() === o.id">
+                {{ openId() === o.id ? 'Ocultar' : 'Ver detalle' }}
+              </button>
+              @if (o.status === 'Confirmado') {
+                <button class="btn o sm" type="button" [disabled]="busyId() === o.id" (click)="change(o, 'Entregado')">Marcar entregado</button>
+                <button class="btn o sm danger" type="button" [disabled]="busyId() === o.id" (click)="change(o, 'Cancelado')">Cancelar</button>
+              }
+            </td>
+          </tr>
+          @if (openId() === o.id) {
+            <tr class="det">
+              <td colspan="6">
+                @if (detailError()) {
+                  <p class="err" role="alert">{{ detailError() }}</p>
+                } @else if (!detail()) {
+                  <p class="muted" aria-busy="true">Cargando detalle…</p>
+                } @else {
+                  <p class="meta">
+                    Pedido <code>{{ detail()!.id }}</code> · última actualización {{ o.updatedAt | date: 'dd/MM/yyyy HH:mm' }}
+                  </p>
+                  @if (detail()!.status === 'Rechazado') {
+                    <p class="err">Rechazado: {{ reasonText(detail()!.reason) }}</p>
+                  }
+                  <table class="items">
+                    <thead><tr><th>Producto</th><th class="num">Precio</th><th class="num">Cant.</th><th class="num">Subtotal</th></tr></thead>
+                    <tbody>
+                      @for (i of detail()!.items; track i.productId) {
+                        <tr>
+                          <td>{{ i.productName }}</td>
+                          <td class="num">{{ i.unitPriceCents | money }}</td>
+                          <td class="num">{{ i.quantity }}</td>
+                          <td class="num">{{ i.unitPriceCents * i.quantity | money }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                    <tfoot><tr><td colspan="3">Total</td><td class="num">{{ detail()!.totalCents | money }}</td></tr></tfoot>
+                  </table>
+                }
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+  <div class="pager">
+    <button class="btn o sm" type="button" [disabled]="page() <= 1" (click)="go(-1)">Anterior</button>
+    Página {{ page() }} de {{ pages }} · {{ result()!.total }} pedidos
+    <button class="btn o sm" type="button" [disabled]="page() >= pages" (click)="go(1)">Siguiente</button>
+  </div>
+}
