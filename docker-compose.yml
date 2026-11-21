@@ -74,6 +74,13 @@ services:
       RabbitMq__Host: rabbitmq
       RabbitMq__User: mercadoya
       RabbitMq__Password: ${RABBITMQ_PASSWORD:-mercadoya_dev}
+      # Cliente HTTP de stock de la API (dia 5): se llama a si misma con el token de orders-worker. El worker pisa Api__BaseUrl.
+      Api__BaseUrl: http://localhost:8080
+      Keycloak__TokenUrl: http://keycloak:8080/realms/mercadoya/protocol/openid-connect/token
+      Keycloak__ClientId: orders-worker
+      Keycloak__ClientSecret: ${ORDERS_WORKER_SECRET:-dev-only-change-me}
+      # Sync = la API procesa la compra en la request; Async = publica OrderRequested y responde 202 (requiere el worker, dia 9).
+      Checkout__Mode: ${CHECKOUT_MODE:-Sync}
     ports: ["5001:8080"]
     depends_on:
       postgres: { condition: service_healthy }

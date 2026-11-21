@@ -9,6 +9,7 @@ var cs = builder.Configuration.GetConnectionString("Mercadoya")!;
 
 builder.Services.AddCatalogoModule(cs).AddInventarioModule(cs).AddPedidosModule(cs);
 builder.Services.AddStockHttpClient(builder.Configuration);   // stock REAL (reemplaza al fake); va DESPUES de AddPedidosModule
+builder.Services.AddOrderMessaging(builder.Configuration);    // RabbitMQ + Checkout:Mode (Sync por defecto; Async desde que corre el worker)
 builder.Services.AddScoped<IProductLookup, CatalogProductLookup>();   // adaptador Pedidos -> Catalogo
 builder.Services.AddKeycloakAuth(builder.Configuration);
 builder.Services.AddProblemDetails();

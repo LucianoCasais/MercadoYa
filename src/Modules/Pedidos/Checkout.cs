@@ -43,25 +43,29 @@ public interface IOrderRepository
     Task SaveAsync(CancellationToken ct);
 }
 
-public sealed record PlaceOrderResult(OrderResponse? Order, string? Error, bool Replayed)
+/// Accepted = el pedido quedo Pendiente y se publico a RabbitMQ (modo Async, responde 202). BrokerDown = no se pudo publicar (503).
+public sealed record PlaceOrderResult(OrderResponse? Order, string? Error, bool Replayed, bool Accepted = false, bool BrokerDown = false)
 {
     public bool IsValid => Error is null;
     public static PlaceOrderResult Fail(string error) => new(null, error, false);
 }
 
-/// Checkout SINCRONO (dia 3 de la guia): crea el pedido, reserva stock, cobra y deja el pedido en su estado final
-/// dentro de la misma request, con fakes de stock y pago. El dia 5 se reemplaza el fake de stock por el cliente real y el
-/// dia 8 este flujo pasa al worker (la API solo crea el pedido Pendiente y responde 202).
-/// Las compensaciones (liberar stock) ya siguen la logica de la SAGA documentada.
+/// Checkout. Dos modos (Checkout:Mode, ver CheckoutOptions):
+///  - Sync (por defecto, dias 3-7): crea el pedido, reserva stock, cobra y lo deja en su estado final dentro de la request.
+///  - Async (dia 8+): crea el pedido Pendiente, publica OrderRequested en RabbitMQ (con confirms) y devuelve 202; la SAGA
+///    (reservar, cobrar, confirmar o compensar) la ejecuta el worker. Si no se puede publicar, el pedido queda Rechazado
+///    (BrokerNoDisponible) y la API responde 503: no quedan pedidos huerfanos.
+/// Las compensaciones (liberar stock) siguen la logica de la SAGA documentada.
 public sealed class CheckoutService(IProductLookup products, IStockClient stock, IPaymentGateway payments,
-    IOrderRepository orders, ILogger<CheckoutService> logger)
+    IOrderRepository orders, ILogger<CheckoutService> logger, IOrderPublisher? publisher = null, CheckoutOptions? options = null)
 {
     public const int MaxLines = 50;
     public const int MaxQuantityPerLine = 99;
     public const int MaxIdempotencyKeyLength = 100;
 
     /// buyerName sale del token (nunca del cuerpo de la request) y se guarda en el pedido.
-    public async Task<PlaceOrderResult> PlaceAsync(string userId, string? idempotencyKey, CreateOrderRequest? request, CancellationToken ct, string? buyerName = null)
+    public async Task<PlaceOrderResult> PlaceAsync(string userId, string? idempotencyKey, CreateOrderRequest? request, CancellationToken ct,
+        string? buyerName = null, string? correlationId = null)
     {
         if (string.IsNullOrWhiteSpace(userId)) return PlaceOrderResult.Fail("Usuario no identificado.");
         var key = idempotencyKey?.Trim();
@@ -97,6 +101,8 @@ public sealed class CheckoutService(IProductLookup products, IStockClient stock,
                 : new PlaceOrderResult(ToResponse(existing), null, true);
         }
 
+        if (options?.Mode == CheckoutMode.Async) return await PublishAsync(order, correlationId, ct);
+
         // Paso 2 de la SAGA: reservar stock.
         var reserve = await ReserveAsync(order, lines, ct);
         if (reserve != StockReserveOutcome.Reserved)
@@ -126,6 +132,25 @@ public sealed class CheckoutService(IProductLookup products, IStockClient stock,
         }
         await orders.SaveAsync(ct);
         return new PlaceOrderResult(ToResponse(order), null, false);
+    }
+
+    /// Modo Async: el pedido ya esta guardado como Pendiente; se publica OrderRequested y se responde sin esperar a la SAGA.
+    private async Task<PlaceOrderResult> PublishAsync(Order order, string? correlationId, CancellationToken ct)
+    {
+        if (publisher is null) throw new InvalidOperationException("Checkout:Mode=Async requiere un IOrderPublisher registrado (AddOrderMessaging).");
+        try
+        {
+            await publisher.PublishAsync(order.ToRequestedMessage(), correlationId ?? Guid.NewGuid().ToString("N"), ct);
+            return new PlaceOrderResult(ToResponse(order), null, false, Accepted: true);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+        {
+            // Sin mensaje no hay quien procese el pedido: se rechaza ya (nada que compensar, todavia no se reservo stock).
+            logger.LogError(ex, "No se pudo publicar el pedido {OrderId}; se rechaza por BrokerNoDisponible", order.Id);
+            order.TryTransition(OrderStatus.Rechazado, RejectionReason.BrokerNoDisponible);
+            await orders.SaveAsync(ct);
+            return new PlaceOrderResult(ToResponse(order), "No pudimos enviar el pedido a procesar.", false, BrokerDown: true);
+        }
     }
 
     /// Consulta de un pedido propio (seguimiento). Devuelve null si no existe o pertenece a otro usuario.

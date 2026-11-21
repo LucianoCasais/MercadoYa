@@ -57,6 +57,7 @@ export class CheckoutPage {
     if (e.status === 0) return 'No pudimos conectar con el servidor. Revisá que la API esté levantada.';
     if (e.status === 400) return e.error?.detail ?? 'El pedido no es válido.';
     if (e.status === 401 || e.status === 403) return 'Tu sesión venció o no tenés permiso para comprar. Volvé a iniciar sesión.';
+    if (e.status === 503) return e.error?.detail ?? 'No pudimos enviar el pedido a procesar. Probá de nuevo en unos minutos.';
     return 'Ocurrió un error inesperado. Probá de nuevo en unos minutos.';
   }
 }
