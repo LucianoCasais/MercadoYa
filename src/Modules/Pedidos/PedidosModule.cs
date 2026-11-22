@@ -27,7 +27,7 @@ public sealed class PedidosDbContext(DbContextOptions<PedidosDbContext> options)
 }
 
 /// Persistencia de pedidos con EF Core. La unicidad de (UserId, IdempotencyKey) la garantiza el indice unico de la BD.
-public sealed class EfOrderRepository(PedidosDbContext db) : IOrderRepository, IAdminOrderRepository
+public sealed class EfOrderRepository(PedidosDbContext db) : IOrderRepository, IAdminOrderRepository, ISagaOrderStore
 {
     public Task<Order?> FindByKeyAsync(string userId, string idempotencyKey, CancellationToken ct) =>
         db.Orders.Include(o => o.Items).FirstOrDefaultAsync(o => o.UserId == userId && o.IdempotencyKey == idempotencyKey, ct);
@@ -51,6 +51,23 @@ public sealed class EfOrderRepository(PedidosDbContext db) : IOrderRepository, I
     }
 
     public Task SaveAsync(CancellationToken ct) => db.SaveChangesAsync(ct);
+
+    // ---- ISagaOrderStore (worker: SAGA del checkout) ----
+    public Task<Order?> FindForSagaAsync(Guid orderId, CancellationToken ct) =>
+        db.Orders.AsNoTracking().Include(o => o.Items).FirstOrDefaultAsync(o => o.Id == orderId, ct);
+
+    /// Una sola sentencia atomica: solo cambia el estado si el pedido sigue Pendiente. Con dos workers (o un mensaje duplicado)
+    /// exactamente uno ve "1 fila afectada"; el otro ve 0 y no hace nada mas.
+    public async Task<bool> TryFinalizeAsync(Guid orderId, OrderStatus to, RejectionReason? reason, CancellationToken ct)
+    {
+        var status = to.ToString();
+        var why = reason?.ToString();
+        var rows = await db.Database.ExecuteSqlInterpolatedAsync($"""
+            UPDATE pedidos."Order" SET "Status" = {status}, "Reason" = {why}, "UpdatedAt" = now()
+            WHERE "Id" = {orderId} AND "Status" = 'Pendiente'
+            """, ct);
+        return rows == 1;
+    }
 
     // ---- IAdminOrderRepository (panel de admin: pedidos de cualquier usuario) ----
     public async Task<(IReadOnlyList<Order> Items, int Total)> ListAsync(OrderStatus? status, int page, int pageSize, CancellationToken ct)
@@ -76,6 +93,8 @@ public static class PedidosModule
          .AddScoped<IOrderRepository, EfOrderRepository>()
          .AddScoped<IAdminOrderRepository, EfOrderRepository>()
          .AddScoped<AdminOrderService>()
+         .AddScoped<ISagaOrderStore, EfOrderRepository>()
+         .AddScoped<OrderSagaProcessor>()
          .AddScoped<IStockClient, FakeStockClient>()
          .AddScoped<IPaymentGateway, FakePaymentGateway>()
          .AddScoped<CheckoutService>();

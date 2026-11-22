@@ -168,7 +168,7 @@ Si el mismo mensaje llegara de nuevo con el pedido ya Confirmado, el worker lo r
 
 ### 6.3 Falla de la propia compensación
 
-Si la liberación de stock falla (por ejemplo, `api` no disponible momentáneamente), el worker **no confirma** el mensaje: Polly reintenta y, si persiste, el mensaje se reencola. Como la liberación es idempotente, repetirla es seguro. Tras un número máximo de reentregas el mensaje va al DLX y a la cola `.dead` para intervención manual, y el pedido permanece Pendiente (nunca queda en un estado final falso).
+Al rechazar un pedido, el worker **primero** lo deja Rechazado (con su motivo) y **después** libera el stock. Si la liberación falla (por ejemplo, `api` no disponible momentáneamente), el worker **no confirma** el mensaje y lo devuelve a la cola. En la reentrega ve el pedido ya Rechazado y repite solo la liberación; como es idempotente, repetirla es seguro. Este orden evita que, si el worker cae entre ambos pasos, un pedido ya compensado se vuelva a reservar o cobrar. Tras `x-delivery-limit` (5) entregas fallidas el mensaje va al DLX y a la cola `orders.dead` para intervención manual: el pedido figura Rechazado y lo único pendiente es devolver el stock (la cola muerta lo deja a la vista). Un mensaje ilegible o de un pedido inexistente va directo a `orders.dead`, sin reintentos.
 
 ## 7. Tabla resumen de escenarios
 
