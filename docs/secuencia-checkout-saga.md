@@ -168,7 +168,7 @@ Si el mismo mensaje llegara de nuevo con el pedido ya Confirmado, el worker lo r
 
 ### 6.3 Falla de la propia compensación
 
-Si la liberación de stock falla (por ejemplo, `api` no disponible momentáneamente), el worker **no confirma** el mensaje: Polly reintenta y, si persiste, el mensaje se reencola. Como la liberación es idempotente, repetirla es seguro. Tras un número máximo de reentregas el mensaje va al DLX y a la cola `.dead` para intervención manual, y el pedido permanece Pendiente (nunca queda en un estado final falso).
+Al rechazar un pedido, el worker **primero** lo deja Rechazado (con su motivo) y **después** libera el stock. Si la liberación falla (por ejemplo, `api` no disponible momentáneamente), el worker **no confirma** el mensaje y lo devuelve a la cola. En la reentrega ve el pedido ya Rechazado y repite solo la liberación; como es idempotente, repetirla es seguro. Este orden evita que, si el worker cae entre ambos pasos, un pedido ya compensado se vuelva a reservar o cobrar. Tras `x-delivery-limit` (5) entregas fallidas el mensaje va al DLX y a la cola `orders.dead` para intervención manual: el pedido figura Rechazado y lo único pendiente es devolver el stock (la cola muerta lo deja a la vista). Un mensaje ilegible o de un pedido inexistente va directo a `orders.dead`, sin reintentos.
 
 ## 7. Tabla resumen de escenarios
 
@@ -184,17 +184,26 @@ Si la liberación de stock falla (por ejemplo, `api` no disponible momentáneame
 | Falla al confirmar tras cobrar | La actualización a Confirmado falla (BD no disponible) | Ninguna: se reintenta hacia adelante | **Pendiente** y luego **Confirmado**: el mensaje se reentrega y el cobro idempotente devuelve el mismo resultado |
 | Mensaje duplicado | Idempotencia por estado, reserva y pago | — | Se procesa una sola vez |
 | Dos compras del último stock | Reserva atómica: una gana | Ninguna para la ganadora | Una **Confirmado**, la otra **Rechazado** (SinStock) |
-| Falla la compensación | Reintentos y, luego, DLX | — | **Pendiente** hasta intervención |
+| Falla la compensación | Reintentos y, luego, DLX | — | **Rechazado**; el stock queda por devolver a mano (el mensaje en `orders.dead` lo deja a la vista) |
 
 ## 8. Resiliencia aplicada a las llamadas del worker
 
-| Parámetro | Valor propuesto |
+Implementada con Polly (`Resilience.cs`). Un mismo pipeline, compartido por todos los mensajes, protege cada dependencia: reintentos (afuera) → circuit breaker → timeout por intento (adentro).
+
+| Parámetro | Valor |
 |---|---|
-| Timeout / deadline por llamada | 5 s |
-| Reintentos | 3, con backoff exponencial y jitter |
-| Circuit breaker | Se abre tras 5 fallos en 30 s; permanece abierto 30 s |
+| Timeout por intento | 5 s |
+| Reintentos | 3, con backoff exponencial (base 0,5 s) y jitter |
+| Circuit breaker | Se abre si fallan al menos la mitad de las llamadas de los últimos 30 s (mínimo 5 llamadas); permanece abierto 30 s y luego prueba una llamada (semiabierto) |
+| Qué se reintenta | Caídas de red, timeouts, 5xx, 408 y 429. **No** se reintentan los 4xx, el "sin stock" (409) ni el pago rechazado: son respuestas válidas o errores que fallarían igual |
+| Por qué es seguro reintentar | Reservar, liberar y cobrar son idempotentes por pedido |
+| Circuito abierto | Falla enseguida, sin llamar al servicio caído y sin gastar los 5 s de timeout |
+| Pago caído (reintentos agotados o circuito abierto) | `PagoNoDisponible`: se libera el stock y se rechaza el pedido |
+| Stock caído | `StockNoDisponible`; si la liberación falla se reencola (pausa de 10 s) |
 | Ack del mensaje | Manual, solo al llegar a un estado final del flujo |
-| Consumo | `prefetch 1`; réplicas del worker como consumidores competidores |
+| Consumo | `prefetch 1`; 2 réplicas del worker como consumidores competidores (`deploy.replicas` en `docker-compose.yml`) |
+
+Los cambios de estado del pedido son condicionales (`UPDATE ... WHERE Status = 'Pendiente'`), así que dos réplicas que reciban el mismo pedido no lo finalizan dos veces.
 
 ## 9. Consistencia
 

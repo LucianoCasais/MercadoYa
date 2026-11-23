@@ -8,7 +8,7 @@
     <ProjectReference Include="../MercadoYa.Shared/MercadoYa.Shared.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <!-- Server: el servicio. Client: lo usan los tests de integracion para llamarlo como lo hara el worker. -->
-    <Protobuf Include="../../contracts/payments.proto" GrpcServices="Both" />
+    <!-- Server: el servicio. El cliente se genera en Modules/Pedidos (GrpcPaymentGateway). -->
+    <Protobuf Include="../../contracts/payments.proto" GrpcServices="Server" />
   </ItemGroup>
 </Project>

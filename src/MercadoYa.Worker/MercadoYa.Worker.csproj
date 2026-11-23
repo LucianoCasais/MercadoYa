@@ -1,16 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk.Worker">
   <ItemGroup>
     <PackageReference Include="RabbitMQ.Client" Version="7.*" />
-    <PackageReference Include="Grpc.Net.Client" Version="2.*" />
-    <PackageReference Include="Grpc.Tools" Version="2.*" />
-    <PackageReference Include="Google.Protobuf" Version="3.*" />
     <PackageReference Include="Microsoft.Extensions.Http.Resilience" Version="10.*" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../MercadoYa.Shared/MercadoYa.Shared.csproj" />
+    <!-- Pedidos trae la SAGA y el cliente gRPC de pagos (GrpcPaymentGateway, generado desde contracts/payments.proto). -->
     <ProjectReference Include="../Modules/Pedidos/MercadoYa.Modules.Pedidos.csproj" />
-  </ItemGroup>
-  <ItemGroup>
-    <Protobuf Include="../../contracts/payments.proto" GrpcServices="Client" />
   </ItemGroup>
 </Project>

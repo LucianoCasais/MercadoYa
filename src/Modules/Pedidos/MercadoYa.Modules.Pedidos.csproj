@@ -1,12 +1,20 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.*" />
+    <PackageReference Include="Polly.Core" Version="8.*" />
     <PackageReference Include="RabbitMQ.Client" Version="7.*" />
+    <PackageReference Include="Grpc.Net.ClientFactory" Version="2.*" />
+    <PackageReference Include="Google.Protobuf" Version="3.*" />
+    <PackageReference Include="Grpc.Tools" Version="2.*" PrivateAssets="all" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../MercadoYa.Shared/MercadoYa.Shared.csproj" />
   </ItemGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Cliente de Payments.ChargeOrder (GrpcPaymentGateway). Se genera SOLO aca: quien referencia Pedidos (worker, api) ya lo tiene. -->
+    <Protobuf Include="../../../contracts/payments.proto" GrpcServices="Client" />
   </ItemGroup>
 </Project>

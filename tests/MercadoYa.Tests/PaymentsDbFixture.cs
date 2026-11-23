@@ -1,4 +1,6 @@
-using MercadoYa.Payments;
+extern alias payments;
+
+using payments::MercadoYa.Payments;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Testcontainers.PostgreSql;

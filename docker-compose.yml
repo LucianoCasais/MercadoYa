@@ -79,7 +79,7 @@ services:
       Keycloak__TokenUrl: http://keycloak:8080/realms/mercadoya/protocol/openid-connect/token
       Keycloak__ClientId: orders-worker
       Keycloak__ClientSecret: ${ORDERS_WORKER_SECRET:-dev-only-change-me}
-      # Sync = la API procesa la compra en la request; Async = publica OrderRequested y responde 202 (requiere el worker, dia 9).
+      # Sync = la API procesa la compra en la request; Async = publica OrderRequested y responde 202 (requiere el worker, dia 9: CHECKOUT_MODE=Async).
       Checkout__Mode: ${CHECKOUT_MODE:-Sync}
     ports: ["5001:8080"]
     depends_on:
@@ -99,8 +99,13 @@ services:
       Keycloak__ClientId: orders-worker
       Keycloak__ClientSecret: ${ORDERS_WORKER_SECRET:-dev-only-change-me}
     depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
       api: { condition: service_started }
       payments: { condition: service_started }
+    # 2 replicas = consumidores competidores sobre la misma cola orders (prefetch 1: RabbitMQ reparte los pedidos entre ambas).
+    # Se puede cambiar al vuelo: docker compose --profile app up -d --scale worker=3
+    deploy: { replicas: 2 }
 
   payments:
     profiles: ["app"]
