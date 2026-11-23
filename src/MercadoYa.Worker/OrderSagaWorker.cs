@@ -10,14 +10,17 @@ namespace MercadoYa.Worker;
 ///    Se pueden levantar varias replicas del worker (docker compose up --scale worker=2): RabbitMQ reparte los mensajes y el
 ///    UPDATE condicional del pedido evita que dos replicas lo finalicen dos veces.
 ///  - Ack solo despues de dejar el pedido en su estado final. Si el worker muere a mitad de camino, RabbitMQ reentrega.
-///  - Requeue (fallo transitorio) -> nack con requeue; tras x-delivery-limit (5) el mensaje pasa al DLX y queda en `orders.dead`.
+///  - Requeue (fallo transitorio) -> basic.reject con requeue; tras x-delivery-limit (5) el mensaje pasa al DLX y queda en `orders.dead`.
+///    Se usa reject y NO nack: desde RabbitMQ 4.3 un basic.nack con requeue no suma al limite de entregas (el mensaje se reintentaria
+///    para siempre), mientras que basic.reject si cuenta como intento fallido.
 ///  - Si RabbitMQ no esta disponible al arrancar (o se cae) el worker reintenta conectarse cada 5 s; la libreria recupera sola
 ///    la conexion y el consumidor ante cortes cortos.
 public sealed class OrderSagaWorker(IServiceScopeFactory scopes, RabbitMqOptions options, ILogger<OrderSagaWorker> logger) : BackgroundService
 {
     public static readonly TimeSpan ReconnectDelay = TimeSpan.FromSeconds(5);
-    /// Pausa antes de devolver un mensaje a la cola: evita gastar las 5 entregas en un segundo si el servicio que fallo tarda en volver.
-    public static readonly TimeSpan RequeueDelay = TimeSpan.FromSeconds(2);
+    /// Pausa antes de devolver un mensaje a la cola. Con x-delivery-limit 5 son ~50 s de margen, mas que los 30 s que el circuit breaker
+    /// de stock queda abierto: asi una caida corta del stock no manda pedidos a orders.dead.
+    public static readonly TimeSpan RequeueDelay = TimeSpan.FromSeconds(10);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -51,7 +54,7 @@ public sealed class OrderSagaWorker(IServiceScopeFactory scopes, RabbitMqOptions
             UserName = options.User,
             Password = options.Password,
             VirtualHost = options.VirtualHost,
-            ClientProvidedName = "mercadoya-worker",
+            ClientProvidedName = $"mercadoya-worker-{Environment.MachineName}",   // se ve en RabbitMQ Management (una conexion por replica)
             AutomaticRecoveryEnabled = true,
             NetworkRecoveryInterval = ReconnectDelay,
         };
@@ -97,11 +100,11 @@ public sealed class OrderSagaWorker(IServiceScopeFactory scopes, RabbitMqOptions
                     await channel.BasicAckAsync(delivery.DeliveryTag, multiple: false, ct);
                     break;
                 case MessageDisposition.DeadLetter:
-                    await channel.BasicNackAsync(delivery.DeliveryTag, multiple: false, requeue: false, ct);   // -> DLX orders.dlx -> orders.dead
+                    await channel.BasicRejectAsync(delivery.DeliveryTag, requeue: false, ct);   // -> DLX orders.dlx -> orders.dead
                     break;
                 default:
                     await Task.Delay(RequeueDelay, ct);
-                    await channel.BasicNackAsync(delivery.DeliveryTag, multiple: false, requeue: true, ct);
+                    await channel.BasicRejectAsync(delivery.DeliveryTag, requeue: true, ct);   // cuenta como entrega fallida (x-delivery-limit)
                     break;
             }
         }

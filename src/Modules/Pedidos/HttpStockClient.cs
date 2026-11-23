@@ -41,14 +41,26 @@ public static class StockHttpClientExtensions
 {
     /// Reemplaza el FakeStockClient por el cliente HTTP real. Se llama DESPUES de AddPedidosModule (la ultima registracion gana).
     /// Config: Api:BaseUrl (por defecto http://localhost:5001; en Docker http://localhost:8080 dentro del contenedor de la api).
-    public static IServiceCollection AddStockHttpClient(this IServiceCollection services, IConfiguration config)
+    /// resilient = true (worker): el cliente se envuelve en Polly (reintentos, circuit breaker y timeout; ver Resilience.cs).
+    /// La API lo deja en false: en modo Sync se llama a si misma y no tiene sentido reintentar dentro de la request del usuario.
+    public static IServiceCollection AddStockHttpClient(this IServiceCollection services, IConfiguration config, bool resilient = false)
     {
         services.AddServiceTokenProvider(config);
-        services.AddHttpClient<IStockClient, HttpStockClient>(c =>
+        Action<HttpClient> configure = c =>
         {
             c.BaseAddress = new Uri(config["Api:BaseUrl"] ?? "http://localhost:5001");
-            c.Timeout = TimeSpan.FromSeconds(5);   // deadline por llamada (Polly se suma el dia 10)
-        });
+            c.Timeout = TimeSpan.FromSeconds(5);   // deadline por intento
+        };
+
+        if (!resilient)
+        {
+            services.AddHttpClient<IStockClient, HttpStockClient>(configure);
+            return services;
+        }
+
+        services.AddHttpClient<HttpStockClient>(configure);
+        services.AddStockResilience();
+        services.AddTransient<IStockClient>(sp => new ResilientStockClient(sp.GetRequiredService<HttpStockClient>(), sp.GetRequiredService<StockResilience>().Pipeline));
         return services;
     }
 }

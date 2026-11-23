@@ -103,6 +103,9 @@ services:
       rabbitmq: { condition: service_healthy }
       api: { condition: service_started }
       payments: { condition: service_started }
+    # 2 replicas = consumidores competidores sobre la misma cola orders (prefetch 1: RabbitMQ reparte los pedidos entre ambas).
+    # Se puede cambiar al vuelo: docker compose --profile app up -d --scale worker=3
+    deploy: { replicas: 2 }
 
   payments:
     profiles: ["app"]
