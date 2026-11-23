@@ -1,8 +1,10 @@
+extern alias payments;
+
 using System.Net;
 using System.Security.Cryptography;
 using Grpc.Core;
 using Grpc.Net.Client;
-using MercadoYa.Payments;
+using payments::MercadoYa.Payments;
 using MercadoYa.Payments.Grpc;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Hosting;

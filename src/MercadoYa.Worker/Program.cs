@@ -10,10 +10,9 @@ builder.Services.AddPedidosModule(builder.Configuration.GetConnectionString("Ped
 // protegido con Polly (timeout de 5 s, 3 reintentos con backoff y jitter, circuit breaker; ver Resilience.cs).
 builder.Services.AddStockHttpClient(builder.Configuration, resilient: true);
 
-// Pagos, tambien con Polly. TODO(Integrante A): cuando este GrpcPaymentGateway (cliente gRPC de payments.proto, Payments:GrpcUrl),
-// cambiar FakePaymentGateway por GrpcPaymentGateway en la linea siguiente. Mientras tanto se usa el fake (rechaza los importes
-// que terminan en 999 centavos, igual que el servicio Payments).
-builder.Services.AddResilientPaymentGateway<FakePaymentGateway>();
+// Pagos REAL: gRPC a Payments.ChargeOrder (Payments:GrpcUrl) con el mismo token de servicio de orders-worker,
+// protegido con el mismo pipeline Polly (ver GrpcPaymentGateway.cs y Resilience.cs).
+builder.Services.AddGrpcPaymentGateway(builder.Configuration);
 
 builder.Services.AddSingleton(RabbitMqOptions.From(builder.Configuration));
 builder.Services.AddHostedService<OrderSagaWorker>();
