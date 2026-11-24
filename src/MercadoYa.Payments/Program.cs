@@ -12,13 +12,12 @@ builder.Services.AddDbContext<PaymentsDbContext>(o => o.UseNpgsql(cs));
 builder.Services.AddScoped<PaymentProcessor>();
 builder.Services.AddKeycloakAuth(builder.Configuration);   // firma, issuer, audience; la politica Worker exige azp = orders-worker
 builder.Services.AddGrpc();
-builder.Services.AddHealthChecks().AddNpgSql(cs, name: "payments-db", tags: ["ready"]);
+builder.Services.AddHealthChecks().AddNpgSql(cs, name: "payments-db", tags: [HealthChecksJson.ReadyTag]);
 
 var app = builder.Build();
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapGrpcService<PaymentsService>();
-app.MapHealthChecks("/health/live", new() { Predicate = _ => false });                    // el proceso responde
-app.MapHealthChecks("/health/ready", new() { Predicate = r => r.Tags.Contains("ready") }); // y llega a su base
+app.MapLiveAndReady();   // /health/live (el proceso responde) y /health/ready (y llega a su base); JSON por check
 app.Run();

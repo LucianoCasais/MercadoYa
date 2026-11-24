@@ -82,6 +82,13 @@ services:
       # Sync = la API procesa la compra en la request; Async = publica OrderRequested y responde 202 (requiere el worker, dia 9: CHECKOUT_MODE=Async).
       Checkout__Mode: ${CHECKOUT_MODE:-Sync}
     ports: ["5001:8080"]
+    healthcheck:
+      # La imagen aspnet no trae curl: se pide /health/ready (la API llega a su base) con bash y /dev/tcp.
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8080 && printf 'GET /health/ready HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n' >&3 && grep -q ' 200 ' <&3"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
     depends_on:
       postgres: { condition: service_healthy }
       keycloak: { condition: service_healthy }
@@ -101,8 +108,9 @@ services:
     depends_on:
       postgres: { condition: service_healthy }
       rabbitmq: { condition: service_healthy }
-      api: { condition: service_started }
-      payments: { condition: service_started }
+      # El worker arranca cuando la API y Payments estan LISTOS (healthcheck), no apenas arranca su contenedor.
+      api: { condition: service_healthy }
+      payments: { condition: service_healthy }
     # 2 replicas = consumidores competidores sobre la misma cola orders (prefetch 1: RabbitMQ reparte los pedidos entre ambas).
     # Se puede cambiar al vuelo: docker compose --profile app up -d --scale worker=3
     deploy: { replicas: 2 }

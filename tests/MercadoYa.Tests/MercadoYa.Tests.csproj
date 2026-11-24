@@ -19,5 +19,6 @@
     <ProjectReference Include="../../src/Modules/Inventario/MercadoYa.Modules.Inventario.csproj" />
     <!-- Alias: Payments y Pedidos generan los mismos tipos de payments.proto; los de Payments se usan solo via `extern alias payments`. -->
     <ProjectReference Include="../../src/MercadoYa.Payments/MercadoYa.Payments.csproj" Aliases="payments" />
+    <ProjectReference Include="../../src/MercadoYa.Api/MercadoYa.Api.csproj" />
   </ItemGroup>
 </Project>
