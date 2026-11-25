@@ -221,6 +221,8 @@ Los cambios de estado del pedido son condicionales (`UPDATE ... WHERE Status = '
 
 ## 11. Pruebas sugeridas (para el día 12 del plan)
 
+Cómo ejecutarlas a mano y qué test automático cubre cada una: [pruebas-de-fallo.md](pruebas-de-fallo.md).
+
 1. Compra exitosa de punta a punta.
 2. Compra de un producto sin stock.
 3. Pago rechazado: verificar que el stock vuelve a su valor original.

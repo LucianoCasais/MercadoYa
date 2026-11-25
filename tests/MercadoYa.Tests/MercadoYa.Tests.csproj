@@ -9,6 +9,7 @@
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.*" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.*" />
     <PackageReference Include="Testcontainers.PostgreSql" Version="4.17.0" />
+    <PackageReference Include="Testcontainers.RabbitMq" Version="4.17.0" />
     <PackageReference Include="xunit" Version="2.*" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.*" />
     <PackageReference Include="coverlet.collector" Version="6.*" />
@@ -20,5 +21,7 @@
     <!-- Alias: Payments y Pedidos generan los mismos tipos de payments.proto; los de Payments se usan solo via `extern alias payments`. -->
     <ProjectReference Include="../../src/MercadoYa.Payments/MercadoYa.Payments.csproj" Aliases="payments" />
     <ProjectReference Include="../../src/MercadoYa.Api/MercadoYa.Api.csproj" />
+    <!-- El worker real (OrderSagaWorker) se prueba contra un RabbitMQ real en OrderSagaRabbitTests. -->
+    <ProjectReference Include="../../src/MercadoYa.Worker/MercadoYa.Worker.csproj" />
   </ItemGroup>
 </Project>

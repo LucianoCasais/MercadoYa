@@ -15,12 +15,15 @@ namespace MercadoYa.Worker;
 ///    para siempre), mientras que basic.reject si cuenta como intento fallido.
 ///  - Si RabbitMQ no esta disponible al arrancar (o se cae) el worker reintenta conectarse cada 5 s; la libreria recupera sola
 ///    la conexion y el consumidor ante cortes cortos.
-public sealed class OrderSagaWorker(IServiceScopeFactory scopes, RabbitMqOptions options, ILogger<OrderSagaWorker> logger) : BackgroundService
+public sealed class OrderSagaWorker(IServiceScopeFactory scopes, RabbitMqOptions options, ILogger<OrderSagaWorker> logger, TimeSpan? requeueDelay = null) : BackgroundService
 {
     public static readonly TimeSpan ReconnectDelay = TimeSpan.FromSeconds(5);
     /// Pausa antes de devolver un mensaje a la cola. Con x-delivery-limit 5 son ~50 s de margen, mas que los 30 s que el circuit breaker
     /// de stock queda abierto: asi una caida corta del stock no manda pedidos a orders.dead.
-    public static readonly TimeSpan RequeueDelay = TimeSpan.FromSeconds(10);
+    public static readonly TimeSpan DefaultRequeueDelay = TimeSpan.FromSeconds(10);
+
+    /// Los tests de integracion la acortan (requeueDelay); en produccion queda el valor por defecto.
+    private TimeSpan RequeueDelay => requeueDelay ?? DefaultRequeueDelay;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
