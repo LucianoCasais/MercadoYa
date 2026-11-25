@@ -79,8 +79,9 @@ services:
       Keycloak__TokenUrl: http://keycloak:8080/realms/mercadoya/protocol/openid-connect/token
       Keycloak__ClientId: orders-worker
       Keycloak__ClientSecret: ${ORDERS_WORKER_SECRET:-dev-only-change-me}
-      # Sync = la API procesa la compra en la request; Async = publica OrderRequested y responde 202 (requiere el worker, dia 9: CHECKOUT_MODE=Async).
-      Checkout__Mode: ${CHECKOUT_MODE:-Sync}
+      # Async (por defecto) = la API publica OrderRequested y responde 202; el worker (replicas) ejecuta la SAGA.
+      # Sync = la API procesa la compra en la request, sin RabbitMQ ni worker (CHECKOUT_MODE=Sync).
+      Checkout__Mode: ${CHECKOUT_MODE:-Async}
     ports: ["5001:8080"]
     healthcheck:
       # La imagen aspnet no trae curl: se pide /health/ready (la API llega a su base) con bash y /dev/tcp.
@@ -140,7 +141,7 @@ services:
 
   web:
     profiles: ["app"]
-    build: ./web           # Angular + nginx (pendiente de crear con `ng new`)
+    build: ./web           # Angular (build de produccion) + nginx; ver web/Dockerfile
     ports: ["3000:80"]
     depends_on: [api]
 
