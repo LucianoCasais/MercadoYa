@@ -6,6 +6,7 @@ using MercadoYa.Modules.Pedidos;
 using MercadoYa.Shared;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddMercadoYaLogging(builder.Configuration, "api");   // Serilog estructurado (ver LoggingSetup)
 var cs = builder.Configuration.GetConnectionString("Mercadoya")!;
 
 builder.Services.AddCatalogoModule(cs).AddInventarioModule(cs).AddPedidosModule(cs);
@@ -34,12 +35,14 @@ var corsOrigins = builder.Configuration.GetSection("Cors:Origins").Get<string[]>
     ? configured : ["http://localhost:3000", "http://localhost:4200"];
 builder.Services.AddCors(o => o.AddDefaultPolicy(p => p.WithOrigins(corsOrigins)
     .WithMethods("GET", "POST", "PUT", "PATCH", "DELETE").AllowAnyHeader()
-    .WithExposedHeaders("Location")                    // el 201 del alta de productos informa la URL del recurso
+    .WithExposedHeaders("Location", Headers.CorrelationId)   // Location: URL del alta; X-Correlation-Id: para reportar un error
     .SetPreflightMaxAge(TimeSpan.FromMinutes(10))));   // el navegador reusa el preflight y no lo repite en cada PATCH/PUT
 // Listo = llega a su base. RabbitMQ NO entra: sin el, el catalogo y el admin siguen funcionando (solo falla el checkout Async).
 builder.Services.AddHealthChecks().AddNpgSql(cs, name: "mercadoya-db", tags: [HealthChecksJson.ReadyTag]);
 
 var app = builder.Build();
+app.UseCorrelationId();          // X-Correlation-Id de cada request: en los logs, en la respuesta y hacia el worker/Payments
+app.UseMercadoYaRequestLogging(); // una linea de log por request, con su CorrelationId
 app.UseExceptionHandler();
 app.UseStatusCodePages();   // un error sin cuerpo (404 de ruta o de recurso, 405...) sale como ProblemDetails, igual que el resto
 app.UseCors();

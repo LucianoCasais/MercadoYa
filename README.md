@@ -64,6 +64,16 @@ Exchange `orders` → cola `orders` (quorum, `x-delivery-limit` 5) con DLX `orde
 
 Contratos en `contracts/` (`payments.proto`, `order-requested.json`).
 
+## Logs y correlación
+
+Los tres servicios (`api`, `worker`, `payments`) escriben logs estructurados con Serilog. Cada evento lleva `Service` y `CorrelationId`:
+
+- La API toma el header `X-Correlation-Id` de cada request (o genera uno) y lo devuelve en la respuesta.
+- El id viaja en el mensaje de RabbitMQ, el worker lo usa al llamar al stock (header HTTP) y a Payments (metadata gRPC).
+- Local: texto legible. Docker (`Logging__Json=true`): una línea JSON por evento.
+
+Para seguir un pedido de punta a punta: `docker compose logs api worker payments | grep <X-Correlation-Id>`.
+
 ## Tests
 
 ```bash

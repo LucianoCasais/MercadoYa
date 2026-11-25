@@ -30,16 +30,23 @@ public sealed class PaymentsHost : WebApplicationFactory<PaymentsService>
 
     public PaymentsHost(string connectionString) => _connectionString = connectionString;
 
+    /// Logs que escribe Payments durante el test (ver CapturingSink).
+    public CapturingSink Logs { get; } = new();
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseSetting("ConnectionStrings:Payments", _connectionString);
-        builder.ConfigureTestServices(s => s.PostConfigure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, o =>
+        builder.ConfigureTestServices(s =>
         {
-            // Sin Keycloak: las claves de firma salen del test en vez de pedirse a /.well-known.
-            o.Authority = null;
-            o.ConfigurationManager = null;
-            o.TokenValidationParameters.IssuerSigningKey = _key;
-        }));
+            s.PostConfigure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, o =>
+            {
+                // Sin Keycloak: las claves de firma salen del test en vez de pedirse a /.well-known.
+                o.Authority = null;
+                o.ConfigurationManager = null;
+                o.TokenValidationParameters.IssuerSigningKey = _key;
+            });
+            s.AddSingleton<Serilog.Core.ILogEventSink>(Logs);
+        });
     }
 
     /// Token como los de Keycloak. azp = client que lo pidio (orders-worker = el worker por client credentials).

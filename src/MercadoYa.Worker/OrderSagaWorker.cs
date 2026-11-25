@@ -1,5 +1,6 @@
 using System.Text;
 using MercadoYa.Modules.Pedidos;
+using MercadoYa.Shared;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
@@ -76,6 +77,7 @@ public sealed class OrderSagaWorker(IServiceScopeFactory scopes, RabbitMqOptions
     private async Task OnMessageAsync(IChannel channel, BasicDeliverEventArgs delivery, CancellationToken ct)
     {
         var correlationId = ReadCorrelationId(delivery.BasicProperties);
+        using var correlation = CorrelationContext.Begin(CorrelationContext.FromIncoming(correlationId));   // viaja al stock (HTTP) y a Payments (gRPC)
         using var logScope = logger.BeginScope(new Dictionary<string, object?> { ["CorrelationId"] = correlationId, ["OrderId"] = delivery.BasicProperties.MessageId });
 
         MessageDisposition disposition;

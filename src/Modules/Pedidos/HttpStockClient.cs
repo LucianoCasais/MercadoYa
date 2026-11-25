@@ -46,6 +46,7 @@ public static class StockHttpClientExtensions
     public static IServiceCollection AddStockHttpClient(this IServiceCollection services, IConfiguration config, bool resilient = false)
     {
         services.AddServiceTokenProvider(config);
+        services.AddTransient<CorrelationIdHandler>();   // X-Correlation-Id de la operacion en curso en cada llamada
         Action<HttpClient> configure = c =>
         {
             c.BaseAddress = new Uri(config["Api:BaseUrl"] ?? "http://localhost:5001");
@@ -54,11 +55,11 @@ public static class StockHttpClientExtensions
 
         if (!resilient)
         {
-            services.AddHttpClient<IStockClient, HttpStockClient>(configure);
+            services.AddHttpClient<IStockClient, HttpStockClient>(configure).AddHttpMessageHandler<CorrelationIdHandler>();
             return services;
         }
 
-        services.AddHttpClient<HttpStockClient>(configure);
+        services.AddHttpClient<HttpStockClient>(configure).AddHttpMessageHandler<CorrelationIdHandler>();
         services.AddStockResilience();
         services.AddTransient<IStockClient>(sp => new ResilientStockClient(sp.GetRequiredService<HttpStockClient>(), sp.GetRequiredService<StockResilience>().Pipeline));
         return services;

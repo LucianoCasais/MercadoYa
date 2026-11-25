@@ -122,6 +122,20 @@ public sealed class StockService(InventarioDbContext db, ICatalogChangeNotifier?
 
 public static class InventarioModule
 {
+    /// Valida el pedido de reserva. Sin esto, una lista vacia o nula daba 500, y un producto repetido chocaba con la clave
+    /// (OrderId, ProductId) de la reserva y se informaba como "ya reservado" (200) sin haber reservado nada.
+    public static Dictionary<string, string[]> ValidateReserve(ReserveRequest? r)
+    {
+        var errors = new Dictionary<string, string[]>();
+        if (r is null || r.OrderId == Guid.Empty) errors["orderId"] = ["El pedido es obligatorio."];
+        if (r?.Items is not { Count: > 0 } items) { errors["items"] = ["La reserva debe tener al menos un producto."]; return errors; }
+        if (items.Any(i => i is null || i.ProductId <= 0 || i.Quantity <= 0))
+            errors["items"] = ["Cada producto necesita un id valido y una cantidad mayor a 0."];
+        else if (items.Select(i => i.ProductId).Distinct().Count() != items.Count)
+            errors["items"] = ["Un producto no puede aparecer dos veces en la misma reserva."];
+        return errors;
+    }
+
     public static IServiceCollection AddInventarioModule(this IServiceCollection s, string cs) =>
         s.AddDbContext<InventarioDbContext>(o => o.UseNpgsql(cs)).AddScoped<StockService>();
 
@@ -130,8 +144,11 @@ public static class InventarioModule
     {
         var g = app.MapGroup("/internal/v1/stock").RequireAuthorization(Policies.Worker);
         g.MapPost("/reservations", async (ReserveRequest r, StockService s, CancellationToken ct) =>
-            await s.ReserveAsync(r.OrderId, r.Items, ct) == ReserveResult.InsufficientStock
-                ? Results.Problem(statusCode: 409, title: "Stock insuficiente") : Results.Ok());
+        {
+            if (ValidateReserve(r) is { Count: > 0 } errors) return Results.ValidationProblem(errors);
+            return await s.ReserveAsync(r.OrderId, r.Items, ct) == ReserveResult.InsufficientStock
+                ? Results.Problem(statusCode: 409, title: "Stock insuficiente") : Results.Ok();
+        });
         g.MapPost("/reservations/{orderId:guid}/release", async (Guid orderId, StockService s, CancellationToken ct) =>
         { await s.ReleaseAsync(orderId, "Liberacion", ct); return Results.Ok(); });
         return app;

@@ -21,31 +21,44 @@ namespace MercadoYa.Tests;
 /// Keycloak se reemplaza por una clave de firma del test (igual que en PaymentsHost).
 public sealed class ApiHost(string connectionString) : WebApplicationFactory<CatalogProductLookup>
 {
-    private const string Issuer = "http://localhost:8081/realms/mercadoya";
+    public const string Issuer = "http://localhost:8081/realms/mercadoya";
+    public const string Audience = "mercadoya-api";
     private readonly SymmetricSecurityKey _key = new(RandomNumberGenerator.GetBytes(32));
+
+    /// Logs que escribe la API durante el test (ver CapturingSink).
+    public CapturingSink Logs { get; } = new();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseSetting("ConnectionStrings:Mercadoya", connectionString);
-        builder.ConfigureTestServices(s => s.PostConfigure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, o =>
+        builder.ConfigureTestServices(s =>
         {
-            o.Authority = null;
-            o.ConfigurationManager = null;
-            o.TokenValidationParameters.IssuerSigningKey = _key;
-        }));
+            s.PostConfigure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, o =>
+            {
+                o.Authority = null;
+                o.ConfigurationManager = null;
+                o.TokenValidationParameters.IssuerSigningKey = _key;
+            });
+            s.AddSingleton<Serilog.Core.ILogEventSink>(Logs);
+        });
     }
 
     /// Token como los de Keycloak: azp = client, realm_access.roles = roles del usuario.
-    public string Token(string azp = "web", params string[] roles) =>
+    public string Token(string azp = "web", params string[] roles) => RawToken(azp, roles);
+
+    /// Token con todos los datos a eleccion, para probar tokens invalidos (vencido, otro emisor, otra audiencia) o un usuario dado.
+    public string RawToken(string azp, string[] roles, string? sub = null, string issuer = Issuer, string audience = Audience, int expiresInMinutes = 5) =>
         new JsonWebTokenHandler().CreateToken(new SecurityTokenDescriptor
         {
-            Issuer = Issuer,
-            Audience = "mercadoya-api",
-            Expires = DateTime.UtcNow.AddMinutes(5),
+            Issuer = issuer,
+            Audience = audience,
+            NotBefore = DateTime.UtcNow.AddMinutes(Math.Min(0, expiresInMinutes) - 30),
+            IssuedAt = DateTime.UtcNow.AddMinutes(Math.Min(0, expiresInMinutes) - 30),
+            Expires = DateTime.UtcNow.AddMinutes(expiresInMinutes),
             Claims = new Dictionary<string, object>
             {
                 ["azp"] = azp,
-                ["sub"] = Guid.NewGuid().ToString(),
+                ["sub"] = sub ?? Guid.NewGuid().ToString(),
                 ["realm_access"] = new Dictionary<string, object> { ["roles"] = roles },
             },
             SigningCredentials = new SigningCredentials(_key, SecurityAlgorithms.HmacSha256),
