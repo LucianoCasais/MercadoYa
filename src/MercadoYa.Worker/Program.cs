@@ -1,7 +1,9 @@
 using MercadoYa.Modules.Pedidos;
+using MercadoYa.Shared;
 using MercadoYa.Worker;
 
 var builder = Host.CreateApplicationBuilder(args);
+builder.Services.AddMercadoYaLogging(builder.Configuration, "worker");
 
 // Pedidos: EF Core + OrderSagaProcessor + ISagaOrderStore (con FAKES de stock y pago; las dos lineas siguientes los reemplazan).
 builder.Services.AddPedidosModule(builder.Configuration.GetConnectionString("Pedidos")!);

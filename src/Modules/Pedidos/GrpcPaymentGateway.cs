@@ -71,7 +71,9 @@ public static class GrpcPaymentGatewayExtensions
     {
         var url = config["Payments:GrpcUrl"] ?? throw new InvalidOperationException("Falta Payments:GrpcUrl.");
         services.AddServiceTokenProvider(config);
+        services.AddTransient<CorrelationIdHandler>();
         services.AddGrpcClient<PaymentsGrpc.PaymentsClient>(o => o.Address = new Uri(url))
+            .AddHttpMessageHandler<CorrelationIdHandler>()   // X-Correlation-Id como metadata gRPC (header HTTP/2)
             // Al cancelarse el token (timeout de Polly o apagado) el cliente lanza OperationCanceledException y no
             // RpcException(Cancelled): asi Polly lo reconoce como SU timeout, lo reintenta y lo cuenta para el breaker.
             .ConfigureChannel(c => c.ThrowOperationCanceledOnCancellation = true);

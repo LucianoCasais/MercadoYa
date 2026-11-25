@@ -33,7 +33,7 @@ public static class CatalogoAdminEndpoints
                 .FirstOrDefaultAsync(ct) is { } dto ? Results.Ok(dto) : NotFound(id));
 
         // Alta: producto + movimiento de stock 'Inicial' en una sola transaccion.
-        g.MapPost("", async (CreateProductRequest r, CatalogoDbContext db, CancellationToken ct) =>
+        g.MapPost("", async (CreateProductRequest r, CatalogoDbContext db, ICatalogChangeNotifier catalog, CancellationToken ct) =>
         {
             var errors = ProductRules.ValidateCreate(r);
             if (errors.Count == 0 && !await db.Categories.AnyAsync(c => c.Id == r.CategoryId, ct))
@@ -50,11 +50,12 @@ public static class CatalogoAdminEndpoints
                 await db.Database.ExecuteSqlInterpolatedAsync(
                     $"""INSERT INTO catalogo."StockMovement" ("ProductId","Delta","Reason") VALUES ({p.Id}, {p.Stock}, 'Inicial')""", ct);
             await tx.CommitAsync(ct);
+            catalog.CatalogChanged();
             return Results.Created($"/api/v1/admin/products/{p.Id}", ToDto(p));
         });
 
         // Edicion de datos (no de stock). Concurrencia optimista con xmin: si otro cambio pisa la fila en el medio, 409.
-        g.MapPut("/{id:int}", async (int id, UpdateProductRequest r, CatalogoDbContext db, CancellationToken ct) =>
+        g.MapPut("/{id:int}", async (int id, UpdateProductRequest r, CatalogoDbContext db, ICatalogChangeNotifier catalog, CancellationToken ct) =>
         {
             var errors = ProductRules.Validate(r.Name, r.Description, r.PriceCents, r.CategoryId, r.ImageUrl);
             if (errors.Count == 0 && !await db.Categories.AnyAsync(c => c.Id == r.CategoryId, ct))
@@ -71,14 +72,19 @@ public static class CatalogoAdminEndpoints
                 return Results.Problem(statusCode: StatusCodes.Status409Conflict, title: "El producto cambio mientras se editaba",
                     detail: "Volve a cargar el producto y reintenta.");
             }
+            catalog.CatalogChanged();
             return Results.Ok(ToDto(p));
         });
 
         // Baja logica (Active = false). Idempotente: dar de baja un producto ya inactivo tambien responde 204.
         // Los pedidos guardan nombre y precio congelados, asi que el historial no se rompe.
-        g.MapDelete("/{id:int}", async (int id, CatalogoDbContext db, CancellationToken ct) =>
-            await db.Products.Where(p => p.Id == id).ExecuteUpdateAsync(s => s.SetProperty(p => p.Active, false), ct) == 0
-                ? NotFound(id) : Results.NoContent());
+        g.MapDelete("/{id:int}", async (int id, CatalogoDbContext db, ICatalogChangeNotifier catalog, CancellationToken ct) =>
+        {
+            if (await db.Products.Where(p => p.Id == id).ExecuteUpdateAsync(s => s.SetProperty(p => p.Active, false), ct) == 0)
+                return NotFound(id);
+            catalog.CatalogChanged();
+            return Results.NoContent();
+        });
 
         return v1;
     }

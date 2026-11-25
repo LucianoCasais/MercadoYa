@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 // Servicio de pagos: gRPC (HTTP/2) para el cobro + HTTP/1.1 para health checks, en puertos distintos (ver Kestrel en appsettings).
 // Local: gRPC en 5003 y health en 5004. Docker: 8081 y 8080 dentro del contenedor (docker-compose pisa Kestrel__Endpoints__*).
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddMercadoYaLogging(builder.Configuration, "payments");
 var cs = builder.Configuration.GetConnectionString("Payments")
          ?? throw new InvalidOperationException("Falta ConnectionStrings:Payments.");
 
@@ -12,13 +13,14 @@ builder.Services.AddDbContext<PaymentsDbContext>(o => o.UseNpgsql(cs));
 builder.Services.AddScoped<PaymentProcessor>();
 builder.Services.AddKeycloakAuth(builder.Configuration);   // firma, issuer, audience; la politica Worker exige azp = orders-worker
 builder.Services.AddGrpc();
-builder.Services.AddHealthChecks().AddNpgSql(cs, name: "payments-db", tags: ["ready"]);
+builder.Services.AddHealthChecks().AddNpgSql(cs, name: "payments-db", tags: [HealthChecksJson.ReadyTag]);
 
 var app = builder.Build();
+app.UseCorrelationId();          // la metadata gRPC x-correlation-id llega como header HTTP/2: mismo middleware que la API
+app.UseMercadoYaRequestLogging();
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapGrpcService<PaymentsService>();
-app.MapHealthChecks("/health/live", new() { Predicate = _ => false });                    // el proceso responde
-app.MapHealthChecks("/health/ready", new() { Predicate = r => r.Tags.Contains("ready") }); // y llega a su base
+app.MapLiveAndReady();   // /health/live (el proceso responde) y /health/ready (y llega a su base); JSON por check
 app.Run();

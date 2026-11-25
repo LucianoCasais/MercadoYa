@@ -23,7 +23,16 @@
 
     @switch (o.status) {
       @case ('Confirmado') { <p>¡Tu compra fue confirmada!</p> }
-      @case ('Pendiente') { <p>Estamos procesando tu pedido{{ waiting() ? '…' : '. Actualizá en unos instantes.' }}</p> }
+      @case ('Pendiente') {
+        @if (gaveUp()) {
+          <p role="status">Tu pedido sigue en proceso y está tardando más de lo normal. No se perdió: actualizá el estado en unos instantes.</p>
+        } @else {
+          <p role="status">
+            Estamos procesando tu pedido…
+            @if (reconnecting()) { <span class="muted">Se perdió la conexión, reintentando.</span> }
+          </p>
+        }
+      }
       @case ('Rechazado') { <p class="err">No pudimos completar tu compra. {{ reasonText(o) }}</p> }
       @case ('Entregado') { <p>Tu pedido fue entregado.</p> }
       @case ('Cancelado') { <p>El pedido fue cancelado.</p> }
@@ -50,6 +59,9 @@
 
     <div class="nav">
       <a class="btn o" routerLink="/tienda">Seguir comprando</a>
+      @if (gaveUp()) {
+        <button class="btn" type="button" (click)="refresh(id())">Actualizar estado</button>
+      }
       @if (o.status === 'Rechazado') {
         <a class="btn" routerLink="/tienda/carrito">Volver al carrito</a>
       }

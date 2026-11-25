@@ -54,15 +54,25 @@ Exchange `orders` → cola `orders` (quorum, `x-delivery-limit` 5) con DLX `orde
 | Proyecto | Responsabilidad | Estado |
 |---|---|---|
 | `MercadoYa.Shared` | Roles, políticas, contratos del mensaje y validación JWT con Keycloak | Listo |
-| `Modules/Catalogo` | Productos y árbol de categorías; listado con búsqueda, filtro por `categoryId` (incluye descendientes), paginación y detalle públicos | Lectura y ABM admin (`/api/v1/admin/products`, baja lógica) listos; falta caché (día 9) |
+| `Modules/Catalogo` | Productos y árbol de categorías; listado con búsqueda, filtro por `categoryId` (incluye descendientes), paginación y detalle públicos | Listo: lectura con caché en memoria (header `X-Cache: HIT/MISS`, se invalida con el ABM y con cada cambio de stock; TTL 60 s) y ABM admin (`/api/v1/admin/products`, baja lógica) |
 | `Modules/Inventario` | Reserva atómica e idempotente, liberación, endpoints internos de stock y ajuste del admin (`PATCH /api/v1/admin/products/{id}/stock`, registra `StockMovement`) | Listo |
 | `Modules/Pedidos` | Entidades, máquina de estados y `DbContext` | Falta POST/GET de pedidos |
-| `MercadoYa.Api` | Host REST `/api/v1`, Swagger, health checks, CORS | Esqueleto |
+| `MercadoYa.Api` | Host REST versionado (`/api/v1`, header `api-supported-versions`), Swagger, CORS, errores en ProblemDetails y health checks (`/health/live`, `/health/ready` en JSON) | Listo |
 | `MercadoYa.Worker` | Orquestador de la SAGA | Solo documentado (días 8 a 10) |
 | `MercadoYa.Payments` | Servicio gRPC de cobro simulado e idempotente, con BD propia; solo acepta el token de servicio de `orders-worker` (client credentials) | Listo. gRPC en `localhost:5003` (local y Docker); health checks en `localhost:5004` con `dotnet run` (en Docker, solo dentro del contenedor). Rechaza importes con `amount_cents % 1000 == 999` (por ejemplo un producto de $ 9,99) |
 | `tests/MercadoYa.Tests` | xUnit: máquina de estados, checkout, validaciones y `StockService` contra PostgreSQL real (Testcontainers) | En curso |
 
 Contratos en `contracts/` (`payments.proto`, `order-requested.json`).
+
+## Logs y correlación
+
+Los tres servicios (`api`, `worker`, `payments`) escriben logs estructurados con Serilog. Cada evento lleva `Service` y `CorrelationId`:
+
+- La API toma el header `X-Correlation-Id` de cada request (o genera uno) y lo devuelve en la respuesta.
+- El id viaja en el mensaje de RabbitMQ, el worker lo usa al llamar al stock (header HTTP) y a Payments (metadata gRPC).
+- Local: texto legible. Docker (`Logging__Json=true`): una línea JSON por evento.
+
+Para seguir un pedido de punta a punta: `docker compose logs api worker payments | grep <X-Correlation-Id>`.
 
 ## Tests
 

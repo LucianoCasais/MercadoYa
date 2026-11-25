@@ -73,6 +73,20 @@ export class CartService {
     this.update(() => []);
   }
 
+  /**
+   * Vuelve a cargar las lineas de un pedido que termino Rechazado (el carrito se vacia al aceptarse el pedido, antes de que el worker
+   * lo resuelva). Solo agrega los productos que no esten ya en el carrito. El stock se toma de la cantidad pedida: se actualiza
+   * apenas el usuario vuelve a agregar el producto desde el catalogo.
+   */
+  restore(items: { productId: number; productName: string; unitPriceCents: number; quantity: number }[]): void {
+    this.update((lines) => [
+      ...lines,
+      ...items
+        .filter((i) => !lines.some((l) => l.productId === i.productId))
+        .map((i) => ({ productId: i.productId, name: i.productName, priceCents: i.unitPriceCents, quantity: i.quantity, stock: i.quantity })),
+    ]);
+  }
+
   quantityOf(productId: number): number {
     return this._lines().find((l) => l.productId === productId)?.quantity ?? 0;
   }

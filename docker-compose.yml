@@ -67,6 +67,7 @@ services:
     profiles: ["app"]
     build: { context: ., dockerfile: Dockerfile.dotnet, args: { PROJECT: MercadoYa.Api } }
     environment: &dotnet-env
+      Logging__Json: "true"   # Serilog: una linea JSON por evento (filtrable por CorrelationId)
       ConnectionStrings__Mercadoya: Host=postgres;Database=mercadoya;Username=mercadoya;Password=${POSTGRES_PASSWORD:-mercadoya_dev}
       Keycloak__Authority: http://keycloak:8080/realms/mercadoya
       Keycloak__Issuer: http://localhost:8081/realms/mercadoya
@@ -79,9 +80,17 @@ services:
       Keycloak__TokenUrl: http://keycloak:8080/realms/mercadoya/protocol/openid-connect/token
       Keycloak__ClientId: orders-worker
       Keycloak__ClientSecret: ${ORDERS_WORKER_SECRET:-dev-only-change-me}
-      # Sync = la API procesa la compra en la request; Async = publica OrderRequested y responde 202 (requiere el worker, dia 9: CHECKOUT_MODE=Async).
-      Checkout__Mode: ${CHECKOUT_MODE:-Sync}
+      # Async (por defecto) = la API publica OrderRequested y responde 202; el worker (replicas) ejecuta la SAGA.
+      # Sync = la API procesa la compra en la request, sin RabbitMQ ni worker (CHECKOUT_MODE=Sync).
+      Checkout__Mode: ${CHECKOUT_MODE:-Async}
     ports: ["5001:8080"]
+    healthcheck:
+      # La imagen aspnet no trae curl: se pide /health/ready (la API llega a su base) con bash y /dev/tcp.
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8080 && printf 'GET /health/ready HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n' >&3 && grep -q ' 200 ' <&3"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
     depends_on:
       postgres: { condition: service_healthy }
       keycloak: { condition: service_healthy }
@@ -101,8 +110,9 @@ services:
     depends_on:
       postgres: { condition: service_healthy }
       rabbitmq: { condition: service_healthy }
-      api: { condition: service_started }
-      payments: { condition: service_started }
+      # El worker arranca cuando la API y Payments estan LISTOS (healthcheck), no apenas arranca su contenedor.
+      api: { condition: service_healthy }
+      payments: { condition: service_healthy }
     # 2 replicas = consumidores competidores sobre la misma cola orders (prefetch 1: RabbitMQ reparte los pedidos entre ambas).
     # Se puede cambiar al vuelo: docker compose --profile app up -d --scale worker=3
     deploy: { replicas: 2 }
@@ -118,6 +128,7 @@ services:
       Keycloak__Audience: mercadoya-api
       Kestrel__Endpoints__Grpc__Url: http://+:8081     # gRPC (HTTP/2)
       Kestrel__Endpoints__Health__Url: http://+:8080   # /health/live y /health/ready (HTTP/1.1)
+      Logging__Json: "true"
     ports: ["5003:8081"]   # gRPC; el 8080 interno queda para health checks
     healthcheck:
       # La imagen aspnet no trae curl: se pide /health/ready con bash y /dev/tcp.
@@ -132,7 +143,7 @@ services:
 
   web:
     profiles: ["app"]
-    build: ./web           # Angular + nginx (pendiente de crear con `ng new`)
+    build: ./web           # Angular (build de produccion) + nginx; ver web/Dockerfile
     ports: ["3000:80"]
     depends_on: [api]
 
