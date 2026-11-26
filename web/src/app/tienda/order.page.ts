@@ -62,6 +62,11 @@ export class OrderPage {
     inject(DestroyRef).onDestroy(() => clearTimeout(this.timer));
   }
 
+  /** Clase de color del estado (mismas etiquetas que el panel admin). */
+  protected tone(status: string): string {
+    return ({ Confirmado: 't-ok', Entregado: 't-ok', Pendiente: 't-wait', Rechazado: 't-no', Cancelado: 't-no' } as Record<string, string>)[status] ?? '';
+  }
+
   protected reasonText(o: Order): string {
     return (o.reason && REASONS[o.reason]) || 'No pudimos completar el pedido.';
   }

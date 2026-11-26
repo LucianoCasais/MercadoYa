@@ -1,25 +1,47 @@
 # MercadoYa
 
-Sistema de gestión y catálogo web de ventas (.NET 10 + Angular + Keycloak). Este repositorio contiene la **base de la entrega del 24/11**: infraestructura de datos, base de datos, realm de Keycloak y esqueleto de módulos. Diseño en `docs/`.
+Sistema de gestión y catálogo web de ventas (.NET 10 + Angular + Keycloak). Diseño en `docs/`; verificación de los indicadores del acta en [`docs/verificacion.md`](docs/verificacion.md) y pruebas de caída en [`docs/pruebas-de-fallo.md`](docs/pruebas-de-fallo.md).
 
 Bocetos de pantallas (HTML interactivo): [`docs/boceto-pantallas.html`](docs/boceto-pantallas.html)
 
-## Levantar la infraestructura
+## Levantar el sistema
 
 ```bash
 cp .env.example .env
-docker compose up -d          # postgres, keycloak, rabbitmq
+docker compose up -d --build   # infraestructura + api, payments, 2 réplicas del worker y web
+docker compose ps              # esperar a que todo figure healthy (Keycloak es el más lento)
 ```
+
+La primera vez tarda unos minutos (restauración de paquetes y build de Angular). La tienda queda en http://localhost:3000.
 
 | Servicio | URL | Acceso de desarrollo |
 |---|---|---|
+| Web (Angular + nginx) | http://localhost:3000 | Usuarios de prueba (abajo) |
+| API (Swagger) | http://localhost:5001/swagger | Token de Keycloak |
 | Keycloak (consola) | http://localhost:8081 | `admin` / `admin_dev` |
 | RabbitMQ (consola) | http://localhost:15672 | `mercadoya` / `mercadoya_dev` |
 | PostgreSQL | `localhost:5432` | `mercadoya` / `mercadoya_dev` |
+| Payments (gRPC) | `localhost:5003` | Token de servicio de `orders-worker` |
+
+El checkout es asíncrono por defecto (la API publica el pedido en RabbitMQ y el worker ejecuta la SAGA). Para que la API procese la compra dentro de la request, sin RabbitMQ ni worker, levantar con `CHECKOUT_MODE=Sync`.
+
+### Desarrollar con `dotnet run`
+
+Para correr la API, Payments o el worker desde el IDE no tienen que estar levantados los contenedores de esos servicios: ocupan los puertos 5001 y 5003, y un worker en contenedor consumiría los pedidos de la cola en lugar del que se está depurando. Levantar solo la infraestructura:
+
+```bash
+docker compose up -d postgres keycloak rabbitmq
+```
+
+Si el sistema completo ya estaba levantado: `docker compose stop api payments worker web`.
 
 Usuarios de prueba del realm `mercadoya`: `admin@mercadoya.local` / `Admin123!` (rol `admin`) y `cliente@mercadoya.local` / `Cliente123!` (rol `cliente`). Los clientes que se registren por su cuenta reciben el rol `cliente`.
 
-Para reiniciar todo desde cero (scripts SQL, realm y topología se aplican solo en el primer arranque): `docker compose down -v && docker compose up -d`.
+Para reiniciar todo desde cero (scripts SQL, realm y topología se aplican solo en el primer arranque): `docker compose down -v && docker compose up -d --build`.
+
+### Probar la API con Postman
+
+Importar [`docs/postman/MercadoYa.postman_collection.json`](docs/postman/MercadoYa.postman_collection.json) y el entorno [`docs/postman/MercadoYa.local.postman_environment.json`](docs/postman/MercadoYa.local.postman_environment.json). Las carpetas se corren en orden (salud, catálogo, 401, cliente, admin y worker) y cada request valida su código HTTP. Las de cliente y admin piden el token desde la pestaña Authorization de la carpeta (*Get New Access Token*, con los usuarios de prueba de arriba).
 
 ## Base de datos
 
@@ -56,34 +78,21 @@ Exchange `orders` → cola `orders` (quorum, `x-delivery-limit` 5) con DLX `orde
 | `MercadoYa.Shared` | Roles, políticas, contratos del mensaje y validación JWT con Keycloak | Listo |
 | `Modules/Catalogo` | Productos y árbol de categorías; listado con búsqueda, filtro por `categoryId` (incluye descendientes), paginación y detalle públicos | Listo: lectura con caché en memoria (header `X-Cache: HIT/MISS`, se invalida con el ABM y con cada cambio de stock; TTL 60 s) y ABM admin (`/api/v1/admin/products`, baja lógica) |
 | `Modules/Inventario` | Reserva atómica e idempotente, liberación, endpoints internos de stock y ajuste del admin (`PATCH /api/v1/admin/products/{id}/stock`, registra `StockMovement`) | Listo |
-| `Modules/Pedidos` | Entidades, máquina de estados y `DbContext` | Falta POST/GET de pedidos |
+| `Modules/Pedidos` | Entidades, máquina de estados, checkout (Sync y Async con RabbitMQ), pedidos del cliente y del admin, SAGA con compensación y resiliencia con Polly | Listo |
 | `MercadoYa.Api` | Host REST versionado (`/api/v1`, header `api-supported-versions`), Swagger, CORS, errores en ProblemDetails y health checks (`/health/live`, `/health/ready` en JSON) | Listo |
-| `MercadoYa.Worker` | Orquestador de la SAGA | Solo documentado (días 8 a 10) |
+| `MercadoYa.Worker` | Consumidor de la cola `orders` que ejecuta la SAGA (reservar stock, cobrar, confirmar o compensar); 2 réplicas en Docker | Listo |
 | `MercadoYa.Payments` | Servicio gRPC de cobro simulado e idempotente, con BD propia; solo acepta el token de servicio de `orders-worker` (client credentials) | Listo. gRPC en `localhost:5003` (local y Docker); health checks en `localhost:5004` con `dotnet run` (en Docker, solo dentro del contenedor). Rechaza importes con `amount_cents % 1000 == 999` (por ejemplo un producto de $ 9,99) |
-| `tests/MercadoYa.Tests` | xUnit: máquina de estados, checkout, validaciones y `StockService` contra PostgreSQL real (Testcontainers) | En curso |
+| `tests/MercadoYa.Tests` | xUnit: dominio, checkout, SAGA, resiliencia, API y seguridad; con PostgreSQL y RabbitMQ reales (Testcontainers) | Listo (300 tests, 76 % de cobertura) |
 
 Contratos en `contracts/` (`payments.proto`, `order-requested.json`).
-
-## Logs y correlación
-
-Los tres servicios (`api`, `worker`, `payments`) escriben logs estructurados con Serilog. Cada evento lleva `Service` y `CorrelationId`:
-
-- La API toma el header `X-Correlation-Id` de cada request (o genera uno) y lo devuelve en la respuesta.
-- El id viaja en el mensaje de RabbitMQ, el worker lo usa al llamar al stock (header HTTP) y a Payments (metadata gRPC).
-- Local: texto legible. Docker (`Logging__Json=true`): una línea JSON por evento.
-
-Para seguir un pedido de punta a punta: `docker compose logs api worker payments | grep <X-Correlation-Id>`.
 
 ## Tests
 
 ```bash
-dotnet test                                        # todos (los de stock levantan un PostgreSQL 16 descartable: requiere Docker)
+dotnet test                                        # todos (los de integración levantan PostgreSQL y RabbitMQ descartables: requiere Docker)
 dotnet test --filter "Category!=Integracion"       # solo los que no necesitan Docker
 ```
 
 ## Pendiente
 
-- **Angular (`web/`)**: crear con `ng new web` y seguir las pantallas de los bocetos (`/tienda`, `/admin`, seguimiento en `/tienda/pedido/:id`).
-- **No se compiló nada**: este entorno no tiene el SDK de .NET. Ejecutar `dotnet restore && dotnet build` y ajustar las versiones de paquetes (están como `10.*`).
-- Los servicios `api`, `worker`, `payments` y `web` del `docker-compose.yml` están en el perfil `app` hasta que haya código para levantarlos: `docker compose --profile app up -d --build`.
 - Cambiar los secretos de desarrollo antes de compartir o desplegar el proyecto.

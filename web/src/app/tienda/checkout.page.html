@@ -1,14 +1,14 @@
-<h1>Finalizar compra</h1>
 <app-checkout-steps [current]="step()" />
+<h1>Finalizar compra</h1>
 
 @if (!cart.count()) {
-  <div class="empty card">
+  <div class="empty">
     <h2>Tu carrito está vacío</h2>
     <a class="btn" routerLink="/tienda">Ir al catálogo</a>
   </div>
 } @else {
   <div class="two">
-    <div class="card">
+    <div class="card form">
       @switch (step()) {
         @case (1) {
           <h2>1. Revisá tu carrito</h2>
@@ -66,8 +66,8 @@
 
     <aside class="card">
       <h4>Resumen</h4>
-      <p class="muted">Productos: {{ cart.count() }}</p>
-      <p class="total">Total {{ cart.totalCents() | money }}</p>
+      <div class="price">Productos: {{ cart.count() }}</div>
+      <div class="total">Total {{ cart.totalCents() | money }}</div>
     </aside>
   </div>
 }

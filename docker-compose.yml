@@ -1,6 +1,6 @@
-# Infraestructura (postgres, keycloak, rabbitmq): `docker compose up -d`
-# Infraestructura + aplicaciones: `docker compose --profile app up -d --build`
-# Cuando exista el código de api/worker/payments/web, quitar los `profiles` para levantar todo con un solo comando.
+# Todo el sistema con un solo comando: `docker compose up -d --build`
+#   (postgres, keycloak, rabbitmq + api, payments, 2 réplicas del worker y web en http://localhost:3000)
+# Solo la infraestructura, para correr api/worker/payments con `dotnet run`: `docker compose up -d postgres keycloak rabbitmq`
 name: mercadoya
 
 services:
@@ -64,10 +64,8 @@ services:
       retries: 10
 
   api:
-    profiles: ["app"]
     build: { context: ., dockerfile: Dockerfile.dotnet, args: { PROJECT: MercadoYa.Api } }
     environment: &dotnet-env
-      Logging__Json: "true"   # Serilog: una linea JSON por evento (filtrable por CorrelationId)
       ConnectionStrings__Mercadoya: Host=postgres;Database=mercadoya;Username=mercadoya;Password=${POSTGRES_PASSWORD:-mercadoya_dev}
       Keycloak__Authority: http://keycloak:8080/realms/mercadoya
       Keycloak__Issuer: http://localhost:8081/realms/mercadoya
@@ -97,7 +95,6 @@ services:
       rabbitmq: { condition: service_healthy }
 
   worker:
-    profiles: ["app"]
     build: { context: ., dockerfile: Dockerfile.dotnet, args: { PROJECT: MercadoYa.Worker } }
     environment:
       <<: *dotnet-env
@@ -114,11 +111,10 @@ services:
       api: { condition: service_healthy }
       payments: { condition: service_healthy }
     # 2 replicas = consumidores competidores sobre la misma cola orders (prefetch 1: RabbitMQ reparte los pedidos entre ambas).
-    # Se puede cambiar al vuelo: docker compose --profile app up -d --scale worker=3
+    # Se puede cambiar al vuelo: docker compose up -d --scale worker=3
     deploy: { replicas: 2 }
 
   payments:
-    profiles: ["app"]
     build: { context: ., dockerfile: Dockerfile.dotnet, args: { PROJECT: MercadoYa.Payments } }
     # Solo lo que usa: su base y la validacion del token. No recibe secretos de otros servicios (minimo privilegio).
     environment:
@@ -128,7 +124,6 @@ services:
       Keycloak__Audience: mercadoya-api
       Kestrel__Endpoints__Grpc__Url: http://+:8081     # gRPC (HTTP/2)
       Kestrel__Endpoints__Health__Url: http://+:8080   # /health/live y /health/ready (HTTP/1.1)
-      Logging__Json: "true"
     ports: ["5003:8081"]   # gRPC; el 8080 interno queda para health checks
     healthcheck:
       # La imagen aspnet no trae curl: se pide /health/ready con bash y /dev/tcp.
@@ -142,7 +137,6 @@ services:
       keycloak: { condition: service_healthy }
 
   web:
-    profiles: ["app"]
     build: ./web           # Angular (build de produccion) + nginx; ver web/Dockerfile
     ports: ["3000:80"]
     depends_on: [api]

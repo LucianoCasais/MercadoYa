@@ -1,17 +1,27 @@
-<header class="hdr">
-  <a class="logo" routerLink="/tienda">MercadoYa</a>
-  <span class="grow"></span>
-  <a class="btn" routerLink="/tienda/carrito">Carrito ({{ cart.count() }})</a>
-  @if (auth.authenticated()) {
-    <span class="who">{{ auth.username() }}</span>
-    @if (auth.isAdmin()) {
-      <a class="btn o" routerLink="/admin">Panel admin</a>
+@if (!nav.isAdmin()) {
+  <header class="hdr">
+    <a class="logo" routerLink="/tienda">MercadoYa</a>
+    <input class="search" type="search" placeholder="Buscar productos" aria-label="Buscar productos" autocomplete="off"
+      [value]="term()" (input)="onInput($any($event.target).value)" (keydown.enter)="search()" />
+    <a class="btn" routerLink="/tienda/carrito">Carrito ({{ cart.count() }})</a>
+    @if (auth.authenticated()) {
+      <span class="who">{{ auth.email() || auth.username() }}</span>
+      @if (auth.isAdmin()) {
+        <a class="btn o" routerLink="/admin">Panel admin</a>
+      }
+      <button class="btn o" type="button" (click)="auth.logout()">Salir</button>
+    } @else {
+      <button class="btn o" type="button" (click)="auth.login()">Ingresar</button>
     }
-    <button class="btn o" type="button" (click)="auth.logout()">Salir</button>
-  } @else {
-    <button class="btn o" type="button" (click)="auth.login()">Ingresar</button>
-  }
-</header>
-<main>
+  </header>
+}
+@if (session.expired()) {
+  <div class="alert" role="alert">
+    <span>Tu sesión venció. Volvé a iniciar sesión para seguir donde estabas.</span>
+    <button class="btn sm" type="button" (click)="auth.login()">Ingresar</button>
+    <button class="btn o sm" type="button" (click)="session.dismiss()">Cerrar</button>
+  </div>
+}
+<main [class.adm-main]="nav.isAdmin()">
   <router-outlet />
 </main>

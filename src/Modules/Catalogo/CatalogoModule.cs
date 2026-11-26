@@ -15,6 +15,8 @@ public sealed class CatalogoDbContext(DbContextOptions<CatalogoDbContext> option
     protected override void OnModelCreating(ModelBuilder m)
     {
         m.HasDefaultSchema("catalogo");
+        // translate() de PostgreSQL para la busqueda sin tildes (ver SearchText).
+        m.HasDbFunction(typeof(SearchText).GetMethod(nameof(SearchText.Translate))!).HasName("translate").IsBuiltIn();
         m.Entity<Category>(e => { e.ToTable("Category"); e.Property(x => x.Name).HasMaxLength(80); e.HasOne<Category>().WithMany().HasForeignKey(x => x.ParentId); });
         m.Entity<Product>(e =>
         {
@@ -49,14 +51,14 @@ public static class CatalogoModule
             CancellationToken ct, int page = 1, int pageSize = 12) =>
         {
             (page, pageSize) = Paging.Normalize(page, pageSize, defaultSize: 12, maxSize: 50);
-            var term = search?.Trim().ToLowerInvariant() ?? "";
+            // Minusculas y sin tildes: "Café" y "cafe" son la misma busqueda (y comparten la entrada de la cache).
+            var term = SearchText.Fold(search?.Trim() ?? "");
             if (term.Length > MaxSearchLength)
                 return Results.ValidationProblem(new Dictionary<string, string[]> { ["search"] = [$"La busqueda admite hasta {MaxSearchLength} caracteres."] });
 
             var (result, hit) = await cache.GetOrCreateAsync($"products|{term}|{categoryId}|{page}|{pageSize}", async token =>
             {
-                var q = db.Products.AsNoTracking().Where(p => p.Active);
-                if (term.Length > 0) q = q.Where(p => p.Name.ToLower().Contains(term));
+                var q = db.Products.AsNoTracking().Where(p => p.Active).NameContains(term);
                 if (categoryId is int cid)   // incluye todas las subcategorias y hojas descendientes
                 {
                     var all = await db.Categories.AsNoTracking().Select(c => new { c.Id, c.ParentId }).ToListAsync(token);

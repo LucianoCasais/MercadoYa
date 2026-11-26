@@ -25,7 +25,7 @@ Para correr solo los que no lo necesitan: `dotnet test --filter "Category!=Integ
 
 ## 2. Pruebas manuales con todo el sistema levantado
 
-Requisito: `docker compose --profile app up -d --build` con el sistema sano (`docker compose --profile app ps` muestra todo `healthy`).
+Requisito: `docker compose up -d --build` con el sistema sano (`docker compose ps` muestra todo `healthy`).
 Los pedidos se crean desde la web (`http://localhost:4200`, usuario `cliente@mercadoya.local` / `Cliente123!`); el stock y los estados se ven con el panel admin (`admin@mercadoya.local` / `Admin123!`) o con SQL:
 
 ```powershell
@@ -33,9 +33,9 @@ Los pedidos se crean desde la web (`http://localhost:4200`, usuario `cliente@mer
 ```
 
 RabbitMQ Management (`http://localhost:15672`, `mercadoya` / `mercadoya_dev`) muestra las colas `orders` y `orders.dead`.
-Los logs de los workers: `docker compose --profile app logs -f worker`.
+Los logs de los workers: `docker compose logs -f worker`.
 
-Después de cada prueba, dejar el sistema sano antes de la siguiente (`docker compose --profile app up -d`).
+Después de cada prueba, dejar el sistema sano antes de la siguiente (`docker compose up -d`).
 
 ### 2.1 RabbitMQ caído
 
@@ -59,13 +59,13 @@ Después de cada prueba, dejar el sistema sano antes de la siguiente (`docker co
 
 1. `docker compose stop worker`
 2. Crear 3 pedidos desde la web: quedan `Pendiente` y la pantalla de seguimiento avisa que sigue en proceso. En Management, la cola `orders` muestra 3 mensajes.
-3. `docker compose --profile app up -d worker`
+3. `docker compose up -d worker`
 4. **Esperado:** los 3 pedidos pasan a `Confirmado` y la cola queda en 0.
 
 ### 2.4 Stock (API interna) caído
 
 1. `docker compose stop worker` y crear un pedido desde la web: queda `Pendiente` en la cola.
-2. `docker compose stop api` y después `docker compose --profile app up -d worker` (si la API no está, el worker espera a que esté sana: levantarlo igual con `docker compose --profile app up -d --no-deps worker`).
+2. `docker compose stop api` y después `docker compose up -d worker` (si la API no está, el worker espera a que esté sana: levantarlo igual con `docker compose up -d --no-deps worker`).
 3. **Esperado:** el worker no puede reservar stock; en los logs se ve el reintento con espera creciente, el circuit breaker del stock y el mensaje que vuelve a la cola entre intentos.
 4. Si la API vuelve a tiempo (`docker compose start api`, antes de unos 50 s) el pedido se confirma. Si no, termina `Rechazado / StockNoDisponible` sin stock descontado.
 
@@ -77,7 +77,7 @@ Después de cada prueba, dejar el sistema sano antes de la siguiente (`docker co
 
 ### 2.6 Dos réplicas del worker
 
-1. `docker compose --profile app ps worker` muestra dos contenedores.
+1. `docker compose ps worker` muestra dos contenedores.
 2. En Management, en la pestaña *Consumers* de la cola `orders` aparecen dos consumidores (`mercadoya-worker-<id>`).
 3. Crear varios pedidos seguidos: los logs de ambos workers muestran pedidos distintos y ninguno se procesa dos veces.
 

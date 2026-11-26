@@ -1,4 +1,9 @@
-<nav class="crumb"><a routerLink="/tienda">← Volver al catálogo</a></nav>
+<nav class="crumb" aria-label="Ruta">
+  <a routerLink="/tienda">Catálogo</a>
+  @if (product(); as p) {
+    / {{ p.name }}
+  }
+</nav>
 
 @if (loading()) {
   <div class="pd" aria-busy="true"><div class="ph skel"></div><div class="card skel"></div></div>
@@ -23,7 +28,7 @@
     <div>
       <h1>{{ p.name }}</h1>
       <div class="big">{{ p.priceCents | money }}</div>
-      <p class="muted">{{ p.stock > 0 ? 'Stock disponible: ' + p.stock + ' unidades' : 'Sin stock' }}</p>
+      <p class="price">{{ p.stock > 0 ? 'Stock disponible: ' + p.stock + ' unidades' : 'Sin stock' }}</p>
       @if (p.description) {
         <p>{{ p.description }}</p>
       }

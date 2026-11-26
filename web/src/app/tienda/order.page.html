@@ -1,69 +1,69 @@
-<h1>Seguimiento del pedido</h1>
 <app-checkout-steps [current]="5" />
+<h1>Seguimiento del pedido</h1>
 
 @if (loading()) {
   <div class="card skel" aria-busy="true"></div>
 } @else if (notFound()) {
-  <div class="empty card">
+  <div class="empty">
     <h2>Pedido no encontrado</h2>
     <p class="muted">No existe o no pertenece a tu cuenta.</p>
     <a class="btn" routerLink="/tienda">Ir al catálogo</a>
   </div>
 } @else if (error()) {
-  <div class="empty card">
+  <div class="empty">
     <p class="err" role="alert">{{ error() }}</p>
     <button class="btn" type="button" (click)="start(id())">Reintentar</button>
   </div>
 } @else if (order(); as o) {
-  <div class="card">
-    <div class="head">
-      <span class="badge" [class]="'badge ' + o.status.toLowerCase()">{{ o.status }}</span>
-      <span class="muted">Pedido {{ o.id }}</span>
-    </div>
+  <p class="price">Pedido {{ o.id }} · {{ o.createdAt | date: 'dd/MM/yyyy HH:mm' }}@if (o.buyerName) { · Comprador: {{ o.buyerName }} }</p>
+  <div class="two">
+    <div class="card">
+      <h4>Estado actual</h4>
+      <p><span class="tag" [class]="'tag ' + tone(o.status)">{{ o.status }}</span></p>
 
-    @switch (o.status) {
-      @case ('Confirmado') { <p>¡Tu compra fue confirmada!</p> }
-      @case ('Pendiente') {
-        @if (gaveUp()) {
-          <p role="status">Tu pedido sigue en proceso y está tardando más de lo normal. No se perdió: actualizá el estado en unos instantes.</p>
-        } @else {
-          <p role="status">
-            Estamos procesando tu pedido…
-            @if (reconnecting()) { <span class="muted">Se perdió la conexión, reintentando.</span> }
-          </p>
+      @switch (o.status) {
+        @case ('Confirmado') { <p class="price" role="status">¡Compra confirmada! Podés volver a ver este pedido desde su enlace.</p> }
+        @case ('Pendiente') {
+          @if (gaveUp()) {
+            <p class="price" role="status">Tu pedido sigue en proceso y está tardando más de lo normal. No se perdió: actualizá el estado en unos instantes.</p>
+          } @else {
+            <p class="price" role="status">
+              Estamos procesando tu pedido… Se actualiza solo cada 1 segundo.
+              @if (reconnecting()) { <span>Se perdió la conexión, reintentando.</span> }
+            </p>
+          }
         }
+        @case ('Rechazado') { <p class="err" role="status">No pudimos completar tu compra. {{ reasonText(o) }}</p> }
+        @case ('Entregado') { <p class="price" role="status">Tu pedido fue entregado.</p> }
+        @case ('Cancelado') { <p class="price" role="status">El pedido fue cancelado.</p> }
       }
-      @case ('Rechazado') { <p class="err">No pudimos completar tu compra. {{ reasonText(o) }}</p> }
-      @case ('Entregado') { <p>Tu pedido fue entregado.</p> }
-      @case ('Cancelado') { <p>El pedido fue cancelado.</p> }
-    }
 
-    <p class="muted">
-      {{ o.createdAt | date: 'dd/MM/yyyy HH:mm' }}@if (o.buyerName) { · Comprador: {{ o.buyerName }} }
-    </p>
-
-    <table>
-      <thead><tr><th>Producto</th><th>Precio</th><th>Cant.</th><th>Subtotal</th></tr></thead>
-      <tbody>
-        @for (l of o.items; track l.productId) {
-          <tr>
-            <td>{{ l.productName }}</td>
-            <td>{{ l.unitPriceCents | money }}</td>
-            <td>{{ l.quantity }}</td>
-            <td>{{ l.unitPriceCents * l.quantity | money }}</td>
-          </tr>
-        }
-      </tbody>
-    </table>
-    <p class="total">Total {{ o.totalCents | money }}</p>
-
-    <div class="nav">
-      <a class="btn o" routerLink="/tienda">Seguir comprando</a>
       @if (gaveUp()) {
         <button class="btn" type="button" (click)="refresh(id())">Actualizar estado</button>
       }
+    </div>
+
+    <div class="card">
+      <h4>Detalle</h4>
+      <div class="tw">
+        <table>
+          <thead><tr><th>Producto</th><th>Precio</th><th>Cant.</th><th>Subtotal</th></tr></thead>
+          <tbody>
+            @for (l of o.items; track l.productId) {
+              <tr>
+                <td>{{ l.productName }}</td>
+                <td>{{ l.unitPriceCents | money }}</td>
+                <td>{{ l.quantity }}</td>
+                <td>{{ l.unitPriceCents * l.quantity | money }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="total">{{ o.totalCents | money }}</div>
+      <a class="btn w" routerLink="/tienda">Volver al catálogo</a>
       @if (o.status === 'Rechazado') {
-        <a class="btn" routerLink="/tienda/carrito">Volver al carrito</a>
+        <a class="btn o w gap" routerLink="/tienda/carrito">Volver al carrito</a>
       }
     </div>
   </div>
