@@ -31,7 +31,14 @@ export class AuthService {
   /** Se llama al arrancar la app. Si Keycloak no responde, la tienda sigue funcionando como anonima. */
   async init(): Promise<void> {
     try {
-      await this.kc.init({ onLoad: 'check-sso', pkceMethod: 'S256', checkLoginIframe: false });
+      // La sesion se consulta en un iframe oculto (silent-check-sso.html): sin esto, cada visita sin sesion redirige toda la
+      // pagina a Keycloak y de vuelta, y la app se descarga y arranca dos veces (el catalogo tardaba casi el doble).
+      await this.kc.init({
+        onLoad: 'check-sso',
+        pkceMethod: 'S256',
+        checkLoginIframe: false,
+        silentCheckSsoRedirectUri: `${window.location.origin}/silent-check-sso.html`,
+      });
       this.refreshState();
       this.kc.onAuthSuccess = () => this.refreshState();
       this.kc.onAuthLogout = () => this.refreshState();

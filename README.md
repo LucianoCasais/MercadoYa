@@ -39,6 +39,10 @@ Usuarios de prueba del realm `mercadoya`: `admin@mercadoya.local` / `Admin123!` 
 
 Para reiniciar todo desde cero (scripts SQL, realm y topología se aplican solo en el primer arranque): `docker compose down -v && docker compose up -d --build`.
 
+### Probar la API con Postman
+
+Importar [`docs/postman/MercadoYa.postman_collection.json`](docs/postman/MercadoYa.postman_collection.json) y el entorno [`docs/postman/MercadoYa.local.postman_environment.json`](docs/postman/MercadoYa.local.postman_environment.json). Las carpetas se corren en orden (salud, catálogo, 401, cliente, admin y worker) y cada request valida su código HTTP. Las de cliente y admin piden el token desde la pestaña Authorization de la carpeta (*Get New Access Token*, con los usuarios de prueba de arriba).
+
 ## Base de datos
 
 Los scripts de `infra/postgres/init/` se ejecutan en orden al crear el volumen:

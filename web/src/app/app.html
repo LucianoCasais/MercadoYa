@@ -15,6 +15,13 @@
     }
   </header>
 }
+@if (session.expired()) {
+  <div class="alert" role="alert">
+    <span>Tu sesión venció. Volvé a iniciar sesión para seguir donde estabas.</span>
+    <button class="btn sm" type="button" (click)="auth.login()">Ingresar</button>
+    <button class="btn o sm" type="button" (click)="session.dismiss()">Cerrar</button>
+  </div>
+}
 <main [class.adm-main]="nav.isAdmin()">
   <router-outlet />
 </main>

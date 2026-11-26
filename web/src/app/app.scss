@@ -4,6 +4,9 @@
 .who { font-size: 13px; white-space: nowrap; }
 .hdr .btn { border-color: #fff; background: #fff; color: var(--red); white-space: nowrap; }
 .hdr .btn.o { background: transparent; color: #fff; }
+.alert { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 10px 24px; background: var(--wait-bg); color: var(--wait); font-weight: 600;
+  span { flex: 1; min-width: 220px; }
+}
 main { padding: 24px; max-width: 1400px; margin: 0 auto; }
 main.adm-main { padding: 0; max-width: none; margin: 0; }
 @media (max-width: 760px) {

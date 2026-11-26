@@ -3,6 +3,7 @@ import { Router, RouterLink, RouterOutlet } from '@angular/router';
 import { AuthService } from './core/auth.service';
 import { CartService } from './core/cart.service';
 import { NavState } from './core/nav-state';
+import { SessionAlert } from './core/session-alert';
 
 @Component({
   imports: [RouterOutlet, RouterLink],
@@ -14,6 +15,7 @@ export class App {
   protected readonly auth = inject(AuthService);
   protected readonly cart = inject(CartService);
   protected readonly nav = inject(NavState);
+  protected readonly session = inject(SessionAlert);
   private readonly router = inject(Router);
 
   /** Texto del buscador del encabezado. La URL (?q=) es la fuente de verdad; esto es solo lo que se esta escribiendo. */

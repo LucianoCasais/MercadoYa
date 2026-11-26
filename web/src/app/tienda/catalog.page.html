@@ -1,22 +1,31 @@
 <h1>Catálogo</h1>
-@if (error() || notice()) {
-  <p class="err" role="alert">{{ error() }}{{ notice() }}</p>
+@if (notice()) {
+  <p class="err" role="alert">{{ notice() }}</p>
 }
 @if (needLogin() && !auth.authenticated()) {
   <button class="btn sm" type="button" (click)="auth.login()">Iniciar sesión</button>
 }
 
 @if (loading()) {
-  <div class="grid" aria-busy="true">
+  <div class="grid" aria-busy="true" aria-label="Cargando productos">
     @for (i of [1, 2, 3, 4, 5, 6, 7, 8]; track i) { <div class="card skel"></div> }
   </div>
 } @else if (error()) {
-  <div class="empty"><button class="btn" type="button" (click)="load()">Reintentar</button></div>
+  <div class="empty">
+    <h2>Algo salió mal</h2>
+    <p class="err" role="alert">{{ error() }}</p>
+    <button class="btn" type="button" (click)="load()">Reintentar</button>
+  </div>
 } @else if (!result()?.items?.length) {
   <div class="empty">
-    <h2>No encontramos productos</h2>
-    <p class="price">Probá con otra búsqueda.</p>
-    <a class="btn" routerLink="/tienda">Ver todo el catálogo</a>
+    @if (search()) {
+      <h2>No encontramos productos para “{{ search() }}”</h2>
+      <p class="price">Probá con otra palabra o revisá cómo está escrita.</p>
+      <a class="btn" routerLink="/tienda">Ver todo el catálogo</a>
+    } @else {
+      <h2>Todavía no hay productos a la venta</h2>
+      <p class="price">Volvé a pasar en un rato.</p>
+    }
   </div>
 } @else {
   <div class="grid">

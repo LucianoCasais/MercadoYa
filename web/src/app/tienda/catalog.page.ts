@@ -1,9 +1,12 @@
-import { Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
+import { Component, DestroyRef, Injector, OnInit, afterNextRender, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { BehaviorSubject, catchError, combineLatest, map, of, switchMap, tap } from 'rxjs';
 import { AuthService } from '../core/auth.service';
 import { CartService } from '../core/cart.service';
+import { markCatalogVisible } from '../core/load-time';
+import { readProblem } from '../core/problem';
 import { Paged, Product, ProductsApi } from '../core/products.api';
 import { MoneyPipe } from '../shared/money.pipe';
 
@@ -18,6 +21,7 @@ export class CatalogPage implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly injector = inject(Injector);
   protected readonly cart = inject(CartService);
   protected readonly auth = inject(AuthService);
 
@@ -50,8 +54,9 @@ export class CatalogPage implements OnInit {
         }),
         switchMap((s) =>
           this.api.list(s.q, s.page).pipe(
-            catchError(() => {
-              this.error.set('No pudimos cargar el catálogo. ¿Está levantada la API?');
+            catchError((e: HttpErrorResponse) => {
+              // Las fallas transitorias ya se reintentaron (errorInterceptor); aca se explica que paso y se ofrece Reintentar.
+              this.error.set('No pudimos cargar el catálogo. ' + readProblem(e).message);
               return of(null);
             }),
           ),
@@ -61,6 +66,8 @@ export class CatalogPage implements OnInit {
       .subscribe((r) => {
         this.result.set(r);
         this.loading.set(false);
+        // Indicador del acta: la primera vez que el catalogo se ve con productos (despues de pintarse).
+        if (r?.items.length) afterNextRender(() => markCatalogVisible(), { injector: this.injector });
       });
   }
 

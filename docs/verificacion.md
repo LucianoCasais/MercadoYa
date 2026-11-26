@@ -11,7 +11,7 @@ El procedimiento de las pruebas de caída está en [pruebas-de-fallo.md](pruebas
 |---|---|---|
 | 100 % de los entregables principales | Checklist E2E (sección 3) | 31 de 31 comprobaciones OK por script (API y base) y los 4 puntos visuales OK en el navegador (sección 3.1) |
 | Al menos 20 productos en el catálogo de prueba | Seed de la base al arrancar de cero | 24 productos, 126 categorías |
-| Catálogo en menos de 3 s | DevTools / medición de `GET /api/v1/products` | 887 ms recién levantado, 35 ms desde la caché |
+| Catálogo en menos de 3 s | Carga completa de la página en el navegador (sección 1.1) y `GET /api/v1/products` | Mediana **0,2 s** sin límite de red, **1,0 s** en 4G y **2,3 s** en 4G lento. La API sola: 887 ms recién levantada, 35 ms desde la caché |
 | Compra en no más de 5 pasos | Recorrido del checkout en el navegador | 5 pasos o menos, comprobado en el navegador (sección 3.1) |
 | 100 % de las funciones admin restringidas al rol admin | `SecurityTests`: recorre los 18 endpoints con cada rol | OK (corre con `dotnet test`) |
 | Cobertura de backend ≥ 40 % | `dotnet test` con coverlet y reportgenerator | **76,2 %** de líneas (meta 50 %) |
@@ -29,6 +29,25 @@ El procedimiento de las pruebas de caída está en [pruebas-de-fallo.md](pruebas
 | Payments | 49,1 % (cuenta el código generado de gRPC) |
 
 Total: 300 tests, todos correctos. El reporte HTML se genera en `coverage/report/index.html` (la carpeta `coverage/` está en `.gitignore`).
+
+### 1.1 Tiempo de carga del catálogo (26/11/2026)
+
+Se mide lo que ve el usuario: desde que pide `http://localhost:3000/tienda` hasta que el catálogo se ve con productos. Incluye HTML, JS, arranque de Angular, consulta de sesión a Keycloak y respuesta de la API. La web deja la marca `performance.mark('catalogo-visible')` y la muestra en la consola del navegador (`[MercadoYa] Catálogo visible en … ms`). El script abre la página en Edge sin ventana, con la caché vacía y sin sesión, 5 veces por cada red:
+
+```bash
+node tests/e2e/medir_carga.mjs
+```
+
+| Red (perfiles de DevTools) | Mediana | Antes de las mejoras |
+|---|---|---|
+| Sin límite | 207 ms | 219 ms |
+| 4G (9 Mbps, 60 ms) | 989 ms | 1400 ms |
+| 4G lento (1,6 Mbps, 150 ms) | 2270 ms | **4896 ms** (no cumplía) |
+
+La primera medición mostró dos problemas en redes lentas, que se corrigieron:
+
+- **La app se descargaba dos veces.** Para saber si había sesión, Keycloak redirigía toda la página y volvía. Ahora la consulta se hace en un iframe oculto (`silent-check-sso.html`).
+- **nginx no comprimía.** Se activó gzip, y el JS principal pasó de 277 KB a 86 KB.
 
 ## 2. Arranque desde cero
 

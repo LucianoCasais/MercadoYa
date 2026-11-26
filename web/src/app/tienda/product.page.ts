@@ -3,6 +3,7 @@ import { Component, effect, inject, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { CartService } from '../core/cart.service';
+import { readProblem } from '../core/problem';
 import { Product, ProductsApi } from '../core/products.api';
 import { MoneyPipe } from '../shared/money.pipe';
 
@@ -50,7 +51,7 @@ export class ProductPage {
       },
       error: (e: HttpErrorResponse) => {
         if (e.status === 404) this.notFound.set(true);
-        else this.error.set('No pudimos cargar el producto. ¿Está levantada la API?');
+        else this.error.set('No pudimos cargar el producto. ' + readProblem(e).message);
         this.loading.set(false);
       },
     });

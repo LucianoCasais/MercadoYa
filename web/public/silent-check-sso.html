@@ -1,0 +1,8 @@
+<!doctype html>
+<!-- Keycloak consulta la sesion en un iframe oculto y vuelve aca; esta pagina le pasa el resultado a la app.
+     Asi, al abrir la tienda, no hay una redireccion de toda la pagina a Keycloak y de vuelta (ver AuthService.init). -->
+<html>
+<body>
+  <script>parent.postMessage(location.href, location.origin);</script>
+</body>
+</html>
