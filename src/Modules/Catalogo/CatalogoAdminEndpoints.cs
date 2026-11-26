@@ -18,8 +18,7 @@ public static class CatalogoAdminEndpoints
         g.MapGet("", async (CatalogoDbContext db, string? search, CancellationToken ct, int page = 1, int pageSize = 20) =>
         {
             (page, pageSize) = Paging.Normalize(page, pageSize, defaultSize: 20, maxSize: 100);
-            var q = db.Products.AsNoTracking();
-            if (!string.IsNullOrWhiteSpace(search)) { var t = search.Trim().ToLower(); q = q.Where(p => p.Name.ToLower().Contains(t)); }
+            var q = db.Products.AsNoTracking().NameContains(search ?? "");
             var total = await q.CountAsync(ct);
             var items = await q.OrderBy(p => p.Name).ThenBy(p => p.Id).Skip((page - 1) * pageSize).Take(pageSize)
                 .Select(p => new AdminProductDto(p.Id, p.Name, p.Description, p.PriceCents, p.Stock, p.CategoryId, p.ImageUrl, p.Active))

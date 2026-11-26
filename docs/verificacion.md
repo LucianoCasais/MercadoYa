@@ -15,7 +15,7 @@ El procedimiento de las pruebas de caída está en [pruebas-de-fallo.md](pruebas
 | Compra en no más de 5 pasos | Recorrido del checkout en el navegador | 5 pasos o menos, comprobado en el navegador (sección 3.1) |
 | 100 % de las funciones admin restringidas al rol admin | `SecurityTests`: recorre los 18 endpoints con cada rol | OK (corre con `dotnet test`) |
 | Cobertura de backend ≥ 40 % | `dotnet test` con coverlet y reportgenerator | **76,2 %** de líneas (meta 50 %) |
-| 0 errores críticos abiertos | Pruebas de fallo y E2E | Ninguno crítico; un hallazgo menor abierto (sección 4) |
+| 0 errores críticos abiertos | Pruebas de fallo y E2E | Ninguno abierto; el único hallazgo (menor) ya está corregido (sección 4) |
 
 ### Cobertura por proyecto
 
@@ -40,7 +40,13 @@ Total: 300 tests, todos correctos. El reporte HTML se genera en `coverage/report
 
 ## 3. Checklist E2E
 
-Se corrió con un script que inicia sesión igual que la web (Authorization Code + PKCE con redirect a `:3000`) y verifica cada resultado contra la API y la base.
+Se corrió con un script que inicia sesión igual que la web (Authorization Code + PKCE con redirect a `:3000`) y verifica cada resultado contra la API y la base. Para repetirla, con el sistema levantado (`docker compose up -d --build`):
+
+```bash
+python tests/e2e/checklist_e2e.py
+```
+
+Solo usa Python 3 sin paquetes extra y tarda unos 2 minutos. Crea productos y pedidos de prueba y detiene unos segundos Payments y RabbitMQ (al terminar los vuelve a levantar). Sale con código 1 si alguna comprobación falla. Última corrida: 26/11/2026, 31 de 31 OK.
 
 Para repetirla a mano conviene este orden, porque algunos puntos dependen de datos de los anteriores:
 
@@ -78,11 +84,13 @@ Lo visual que el script no puede mostrar, comprobado a mano en `http://localhost
 | 4 | `/admin` con un cliente muestra la pantalla 403 | OK | 25/11 |
 | 5 | Tras el rechazo, el carrito recupera los productos | OK | 25/11 |
 
-## 4. Hallazgos abiertos
+## 4. Hallazgos
 
-| Hallazgo | Gravedad | Detalle |
+No quedan hallazgos abiertos.
+
+| Hallazgo | Gravedad | Estado |
 |---|---|---|
-| La búsqueda no ignora las tildes | Menor | "café" encuentra el café, pero "cafe" da 0 resultados. Módulo Catálogo. Se arregla normalizando las tildes en la consulta, sin tocar el esquema |
+| La búsqueda no ignoraba las tildes ("cafe" daba 0 resultados) | Menor | Corregido el 26/11: la búsqueda de la tienda y la del panel ignoran mayúsculas y tildes con `translate()` de PostgreSQL, sin cambiar el esquema (`SearchText`, con tests). El punto 13 de la checklist ahora busca "cafe" sin tilde |
 
 ## 5. Nota para demos
 

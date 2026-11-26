@@ -58,6 +58,23 @@ public sealed class CatalogApiTests(PostgresFixture pg) : IDisposable
         Assert.Equal($"Yerba Suave {_tag}", Assert.Single(r.Items).Name);
     }
 
+    [Theory]
+    [InlineData("cafe")]      // sin tilde encuentra el nombre con tilde
+    [InlineData("CAFÉ")]      // mayusculas con tilde
+    [InlineData("Café molí")] // tildes en otra vocal y parte del nombre
+    public async Task La_busqueda_no_distingue_tildes(string text)
+    {
+        await CreateAsync("Café Molido");
+        await CreateAsync("Te Verde");
+
+        var publico = await SearchAsync(text, pageSize: 50);
+        var admin = await Admin.GetFromJsonAsync<PagedResult<AdminProductDto>>($"/api/v1/admin/products?search={Uri.EscapeDataString(text)}&pageSize=100");
+
+        Assert.Contains(publico.Items, p => p.Name == $"Café Molido {_tag}");
+        Assert.DoesNotContain(publico.Items, p => p.Name == $"Te Verde {_tag}");
+        Assert.Contains(admin!.Items, p => p.Name == $"Café Molido {_tag}");
+    }
+
     [Fact]
     public async Task El_listado_pagina_y_ordena_por_nombre()
     {
