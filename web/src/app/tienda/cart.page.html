@@ -6,7 +6,7 @@
 } @else {
   <h1>Tu carrito</h1>
   <div class="two">
-    <div class="card tw">
+    <div class="tw">
       <table>
         <thead><tr><th>Producto</th><th>Precio</th><th>Cant.</th><th>Subtotal</th><th></th></tr></thead>
         <tbody>
@@ -14,11 +14,11 @@
             <tr>
               <td>{{ l.name }}</td>
               <td>{{ l.priceCents | money }}</td>
-              <td class="stp">
+              <td><div class="stp">
                 <button class="btn o sm" type="button" aria-label="Quitar uno" (click)="cart.decrease(l.productId)">−</button>
                 <span aria-live="polite">{{ l.quantity }}</span>
                 <button class="btn o sm" type="button" aria-label="Agregar uno" (click)="inc(l.productId)">+</button>
-              </td>
+              </div></td>
               <td>{{ l.priceCents * l.quantity | money }}</td>
               <td><button class="btn o sm" type="button" (click)="cart.remove(l.productId)">Quitar</button></td>
             </tr>
@@ -29,10 +29,10 @@
     </div>
     <div class="card">
       <h4>Resumen</h4>
-      <p class="muted">Productos: {{ cart.count() }}</p>
-      <p class="total">Total {{ cart.totalCents() | money }}</p>
+      <div class="price">Productos: {{ cart.count() }}</div>
+      <div class="total">Total {{ cart.totalCents() | money }}</div>
       @if (auth.authenticated() === false) {
-        <p class="muted">Para continuar te pediremos iniciar sesión.</p>
+        <p class="price">Para continuar te pediremos iniciar sesión.</p>
       }
       <button class="btn w" type="button" (click)="next()">Continuar</button>
       <button class="btn o w gap" type="button" (click)="cart.clear()">Vaciar carrito</button>
