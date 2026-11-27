@@ -3,18 +3,18 @@
 Evidencia de que el sistema cumple los indicadores del acta. Cada fila dice cómo se comprobó y qué resultó.
 El procedimiento de las pruebas de caída está en [pruebas-de-fallo.md](pruebas-de-fallo.md).
 
-**Verificación desde cero — 25/11/2026**
+**Verificación desde cero — 27/11/2026** (la primera fue el 25/11)
 
 ## 1. Indicadores
 
 | Indicador | Cómo se verificó | Resultado |
 |---|---|---|
-| 100 % de los entregables principales | Checklist E2E (sección 3) | 31 de 31 comprobaciones OK por script (API y base) y los 4 puntos visuales OK en el navegador (sección 3.1) |
+| 100 % de los entregables principales | Checklist E2E (sección 3) | 31 de 31 comprobaciones OK por script (API y base), corrida el 27/11 sobre el sistema recién levantado, y los 4 puntos visuales OK en el navegador (sección 3.1) |
 | Al menos 20 productos en el catálogo de prueba | Seed de la base al arrancar de cero | 24 productos, 126 categorías |
 | Catálogo en menos de 3 s | Carga completa de la página en el navegador (sección 1.1) y `GET /api/v1/products` | Mediana **0,2 s** sin límite de red, **1,0 s** en 4G y **2,3 s** en 4G lento. La API sola: 887 ms recién levantada, 35 ms desde la caché |
 | Compra en no más de 5 pasos | Recorrido del checkout en el navegador | 5 pasos o menos, comprobado en el navegador (sección 3.1) |
-| 100 % de las funciones admin restringidas al rol admin | `SecurityTests`: recorre los 18 endpoints con cada rol | OK (corre con `dotnet test`) |
-| Cobertura de backend ≥ 40 % | `dotnet test` con coverlet y reportgenerator | **76,2 %** de líneas (meta 50 %) |
+| 100 % de las funciones admin restringidas al rol admin | `tests/e2e/verificar_permisos.py` contra el sistema levantado (sección 1.2) y `SecurityTests` en `dotnet test` (los 18 endpoints con cada rol) | **9 de 9** endpoints de admin: 401 sin token o con token falsificado, 403 para cliente y worker, y solo el admin entra. Los 2 internos solo aceptan al worker |
+| Cobertura de backend ≥ 40 % | `dotnet test` con coverlet y reportgenerator | **76 %** de líneas y 73 % de ramas (meta 50 %) |
 | 0 errores críticos abiertos | Pruebas de fallo y E2E | Ninguno abierto; el único hallazgo (menor) ya está corregido (sección 4) |
 
 ### Cobertura por proyecto
@@ -22,13 +22,13 @@ El procedimiento de las pruebas de caída está en [pruebas-de-fallo.md](pruebas
 | Proyecto | Cobertura |
 |---|---|
 | Inventario / Shared | 100 % |
-| Catálogo | 93,6 % |
+| Catálogo | 94 % |
 | API | 81,1 % |
 | Pedidos | 76,7 % |
 | Worker | 68,8 % |
-| Payments | 49,1 % (cuenta el código generado de gRPC) |
+| Payments | 47,4 % (cuenta el código generado de gRPC) |
 
-Total: 300 tests, todos correctos. El reporte HTML se genera en `coverage/report/index.html` (la carpeta `coverage/` está en `.gitignore`).
+Total: 312 tests, todos correctos (27/11). El reporte HTML se genera en `coverage/report/index.html` (la carpeta `coverage/` está en `.gitignore`).
 
 ### 1.1 Tiempo de carga del catálogo (26/11/2026)
 
@@ -49,9 +49,31 @@ La primera medición mostró dos problemas en redes lentas, que se corrigieron:
 - **La app se descargaba dos veces.** Para saber si había sesión, Keycloak redirigía toda la página y volvía. Ahora la consulta se hace en un iframe oculto (`silent-check-sso.html`).
 - **nginx no comprimía.** Se activó gzip, y el JS principal pasó de 277 KB a 86 KB.
 
+### 1.2 Permisos de los endpoints de admin (27/11/2026)
+
+Script que lee del Swagger todos los endpoints y los llama con cada tipo de usuario. Si se agrega un endpoint, queda incluido sin cambiar el script. Usa ids que no existen y cuerpos vacíos, así que no modifica datos:
+
+```bash
+python tests/e2e/verificar_permisos.py
+```
+
+| Endpoint | Sin token | Token falsificado | Cliente | Worker | Admin |
+|---|---|---|---|---|---|
+| `GET /api/v1/admin/orders` | 401 | 401 | 403 | 403 | 200 |
+| `GET /api/v1/admin/orders/{id}` | 401 | 401 | 403 | 403 | 404 (id inexistente) |
+| `PATCH /api/v1/admin/orders/{id}/status` | 401 | 401 | 403 | 403 | 400 (cuerpo vacío) |
+| `GET /api/v1/admin/products` | 401 | 401 | 403 | 403 | 200 |
+| `POST /api/v1/admin/products` | 401 | 401 | 403 | 403 | 400 (cuerpo vacío) |
+| `GET /api/v1/admin/products/{id}` | 401 | 401 | 403 | 403 | 404 (id inexistente) |
+| `PUT /api/v1/admin/products/{id}` | 401 | 401 | 403 | 403 | 400 (cuerpo vacío) |
+| `DELETE /api/v1/admin/products/{id}` | 401 | 401 | 403 | 403 | 404 (id inexistente) |
+| `PATCH /api/v1/admin/products/{id}/stock` | 401 | 401 | 403 | 403 | 400 (cuerpo vacío) |
+
+Los endpoints internos del worker (`POST /internal/v1/stock/reservations` y `.../{orderId}/release`) se prueban al revés: responden 401 sin token o con token falsificado, 403 para cliente y admin, y solo el worker entra.
+
 ## 2. Arranque desde cero
 
-`docker compose down -v` y `docker compose up -d --build`: todo levantó sano en 53 s, con las 2 réplicas del worker y la web en `http://localhost:3000`. Nació solo:
+`docker compose down -v` y `docker compose up -d --build`: todo levantó sano en 63 s (27/11; el 25/11, 53 s), con las 2 réplicas del worker y la web en `http://localhost:3000`. Nació solo:
 
 - Base `mercadoya`: 6 tablas, 24 productos y 126 categorías. Base `payments`: su tabla.
 - Keycloak: realm `mercadoya`.
@@ -65,7 +87,7 @@ Se corrió con un script que inicia sesión igual que la web (Authorization Code
 python tests/e2e/checklist_e2e.py
 ```
 
-Solo usa Python 3 sin paquetes extra y tarda unos 2 minutos. Crea productos y pedidos de prueba y detiene unos segundos Payments y RabbitMQ (al terminar los vuelve a levantar). Sale con código 1 si alguna comprobación falla. Última corrida: 26/11/2026, 31 de 31 OK.
+Solo usa Python 3 sin paquetes extra y tarda unos 2 minutos. Crea productos y pedidos de prueba y detiene unos segundos Payments y RabbitMQ (al terminar los vuelve a levantar). Sale con código 1 si alguna comprobación falla. Última corrida: 27/11/2026 sobre el sistema recién levantado de cero, 31 de 31 OK.
 
 Para repetirla a mano conviene este orden, porque algunos puntos dependen de datos de los anteriores:
 
@@ -98,10 +120,10 @@ Lo visual que el script no puede mostrar, comprobado a mano en `http://localhost
 
 | # | Qué mirar | Resultado | Cuándo |
 |---|---|---|---|
-| 2 | El checkout sin sesión redirige al login de Keycloak | OK | 25/11 |
-| 3 | La compra se completa en 5 pasos o menos | OK | 25/11 |
-| 4 | `/admin` con un cliente muestra la pantalla 403 | OK | 25/11 |
-| 5 | Tras el rechazo, el carrito recupera los productos | OK | 25/11 |
+| 2 | El checkout sin sesión redirige al login de Keycloak | OK | 25/11 a mano; 27/11 con un recorrido automático en Edge |
+| 3 | La compra se completa en 5 pasos o menos | OK | 25/11 a mano; 27/11 con un recorrido automático en Edge |
+| 4 | `/admin` con un cliente muestra la pantalla 403 | OK | 25/11 a mano; 27/11 con un recorrido automático en Edge |
+| 5 | Tras el rechazo, el carrito recupera los productos | OK | 25/11 a mano; 27/11 con un recorrido automático en Edge |
 
 ## 4. Hallazgos
 
