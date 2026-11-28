@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1150 600" width="1150" height="600" role="img" aria-labelledby="t d" font-family="Inter, 'Segoe UI', Arial, sans-serif">
+<title id="t">MercadoYa: zona de consistencia eventual del checkout</title>
+<desc id="d">El pedido se crea en una transacción (consistente) y queda Pendiente. Entre la respuesta 202 y el estado final, el worker reserva el stock, cobra y deja el estado final: esa es la zona de consistencia eventual. Después el pedido queda Confirmado o Rechazado. Durante la zona, el cliente ve Pendiente y la web consulta cada segundo, el administrador ve el pedido sin acciones y el catálogo muestra el stock anterior hasta la reserva.</desc>
+<defs>
+<marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#333"/></marker>
+<marker id="ad" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#b36b00"/></marker>
+<marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2e7d4f"/></marker>
+</defs>
+<rect width="1150" height="600" fill="#ffffff"/>
+<rect x="20" y="20" width="190" height="190" rx="12" fill="#f1f8f3" stroke="#2e7d4f" stroke-width="1.2"/>
+<text x="32" y="39" font-size="12" font-weight="700" fill="#2e7d4f">Consistente</text>
+<rect x="30" y="70" width="170" height="100" rx="10" fill="#fdecee" stroke="#c8102e" stroke-width="1.5"/>
+<text x="115.0" y="107.0" text-anchor="middle" font-size="12" font-weight="700" fill="#1d1d1b">api: crea el pedido</text>
+<text x="115.0" y="124.0" text-anchor="middle" font-size="12" fill="#1d1d1b">queda Pendiente</text>
+<text x="115.0" y="141.0" text-anchor="middle" font-size="12" fill="#1d1d1b">(una transacción)</text>
+<rect x="225" y="20" width="770" height="190" rx="12" fill="#fff8e6" stroke="#c77700" stroke-width="1.2" stroke-dasharray="6 4"/>
+<text x="237" y="39" font-size="12" font-weight="700" fill="#8a4a00">ZONA DE CONSISTENCIA EVENTUAL · el pedido figura Pendiente</text>
+<rect x="240" y="70" width="124" height="100" rx="10" fill="#fdecee" stroke="#c8102e" stroke-width="1.5"/>
+<text x="302.0" y="98.5" text-anchor="middle" font-size="12" font-weight="700" fill="#1d1d1b">api</text>
+<text x="302.0" y="115.5" text-anchor="middle" font-size="12" fill="#1d1d1b">responde 202 y</text>
+<text x="302.0" y="132.5" text-anchor="middle" font-size="12" fill="#1d1d1b">publica</text>
+<text x="302.0" y="149.5" text-anchor="middle" font-size="12" fill="#1d1d1b">OrderRequested</text>
+<rect x="394" y="70" width="124" height="100" rx="10" fill="#f3e8fa" stroke="#7b3fa0" stroke-width="1.5"/>
+<text x="456.0" y="107.0" text-anchor="middle" font-size="12" font-weight="700" fill="#1d1d1b">RabbitMQ</text>
+<text x="456.0" y="124.0" text-anchor="middle" font-size="12" fill="#1d1d1b">cola orders</text>
+<text x="456.0" y="141.0" text-anchor="middle" font-size="12" fill="#1d1d1b">mensaje durable</text>
+<rect x="548" y="70" width="124" height="100" rx="10" fill="#fdecee" stroke="#c8102e" stroke-width="1.5"/>
+<text x="610.0" y="107.0" text-anchor="middle" font-size="12" font-weight="700" fill="#1d1d1b">worker</text>
+<text x="610.0" y="124.0" text-anchor="middle" font-size="12" fill="#1d1d1b">reserva el stock</text>
+<text x="610.0" y="141.0" text-anchor="middle" font-size="12" fill="#1d1d1b">(atómico)</text>
+<rect x="702" y="70" width="124" height="100" rx="10" fill="#fdecee" stroke="#c8102e" stroke-width="1.5"/>
+<text x="764.0" y="107.0" text-anchor="middle" font-size="12" font-weight="700" fill="#1d1d1b">worker</text>
+<text x="764.0" y="124.0" text-anchor="middle" font-size="12" fill="#1d1d1b">cobra por gRPC</text>
+<text x="764.0" y="141.0" text-anchor="middle" font-size="12" fill="#1d1d1b">(idempotente)</text>
+<rect x="856" y="70" width="124" height="100" rx="10" fill="#fdecee" stroke="#c8102e" stroke-width="1.5"/>
+<text x="918.0" y="107.0" text-anchor="middle" font-size="12" font-weight="700" fill="#1d1d1b">worker</text>
+<text x="918.0" y="124.0" text-anchor="middle" font-size="12" fill="#1d1d1b">deja el estado</text>
+<text x="918.0" y="141.0" text-anchor="middle" font-size="12" fill="#1d1d1b">final del pedido</text>
+<rect x="1010" y="20" width="120" height="190" rx="12" fill="#f1f8f3" stroke="#2e7d4f" stroke-width="1.2"/>
+<text x="1022" y="39" font-size="12" font-weight="700" fill="#2e7d4f">Consistente</text>
+<rect x="1020" y="70" width="100" height="100" rx="10" fill="#e8f5ec" stroke="#2e7d4f" stroke-width="1.5"/>
+<text x="1070.0" y="107.0" text-anchor="middle" font-size="12" font-weight="700" fill="#1d1d1b">Confirmado</text>
+<text x="1070.0" y="124.0" text-anchor="middle" font-size="12" fill="#1d1d1b">o</text>
+<text x="1070.0" y="141.0" text-anchor="middle" font-size="12" fill="#1d1d1b">Rechazado</text>
+<path d="M200,120 H240" fill="none" stroke="#333" stroke-width="1.6" marker-end="url(#af)"/>
+<path d="M364,120 H394" fill="none" stroke="#333" stroke-width="1.6" marker-end="url(#af)"/>
+<path d="M518,120 H548" fill="none" stroke="#333" stroke-width="1.6" marker-end="url(#af)"/>
+<path d="M672,120 H702" fill="none" stroke="#333" stroke-width="1.6" marker-end="url(#af)"/>
+<path d="M826,120 H856" fill="none" stroke="#333" stroke-width="1.6" marker-end="url(#af)"/>
+<path d="M980,120 H1020" fill="none" stroke="#333" stroke-width="1.6" marker-end="url(#af)"/>
+<rect x="20" y="235" width="1110" height="200" rx="12" fill="#f7f7f5" stroke="#c9c9c0" stroke-width="1.2"/>
+<text x="32" y="254" font-size="12" font-weight="700" fill="#5b5b55">Qué ve cada actor mientras el pedido está Pendiente</text>
+<rect x="40" y="275" width="340" height="140" rx="10" fill="#e8f0fb" stroke="#2b5ca8" stroke-width="1.5"/>
+<text x="210.0" y="315.0" text-anchor="middle" font-size="12" font-weight="700" fill="#1d1d1b">Cliente</text>
+<text x="210.0" y="332.0" text-anchor="middle" font-size="12" fill="#1d1d1b">Ve «Pendiente» y «Estamos procesando tu pedido».</text>
+<text x="210.0" y="349.0" text-anchor="middle" font-size="12" fill="#1d1d1b">La web consulta cada 1 s (hasta 30 veces)</text>
+<text x="210.0" y="366.0" text-anchor="middle" font-size="12" fill="#1d1d1b">y muestra el resultado apenas se resuelve.</text>
+<text x="210.0" y="383.0" text-anchor="middle" font-size="12" fill="#1d1d1b">Si pasan 30 s: botón «Actualizar estado».</text>
+<rect x="405" y="275" width="340" height="140" rx="10" fill="#ffffff" stroke="#555555" stroke-width="1.5"/>
+<text x="575.0" y="323.5" text-anchor="middle" font-size="12" font-weight="700" fill="#1d1d1b">Administrador</text>
+<text x="575.0" y="340.5" text-anchor="middle" font-size="12" fill="#1d1d1b">Ve el pedido con estado Pendiente.</text>
+<text x="575.0" y="357.5" text-anchor="middle" font-size="12" fill="#1d1d1b">No puede marcarlo Entregado ni Cancelarlo:</text>
+<text x="575.0" y="374.5" text-anchor="middle" font-size="12" fill="#1d1d1b">esas acciones existen solo para Confirmado.</text>
+<rect x="770" y="275" width="340" height="140" rx="10" fill="#fff4e0" stroke="#c77700" stroke-width="1.5"/>
+<text x="940.0" y="315.0" text-anchor="middle" font-size="12" font-weight="700" fill="#1d1d1b">Catálogo (otros clientes)</text>
+<text x="940.0" y="332.0" text-anchor="middle" font-size="12" fill="#1d1d1b">Muestra el stock anterior a la reserva.</text>
+<text x="940.0" y="349.0" text-anchor="middle" font-size="12" fill="#1d1d1b">Cuando el worker reserva o libera,</text>
+<text x="940.0" y="366.0" text-anchor="middle" font-size="12" fill="#1d1d1b">la api invalida la caché. Si se agota:</text>
+<text x="940.0" y="383.0" text-anchor="middle" font-size="12" fill="#1d1d1b">el pedido termina Rechazado (SinStock).</text>
+<rect x="20" y="455" width="1110" height="100" rx="12" fill="#f7f7f5" stroke="#c9c9c0" stroke-width="1.2"/>
+<text x="32" y="474" font-size="12" font-weight="700" fill="#5b5b55">Cuánto dura la zona</text>
+<rect x="40" y="490" width="250" height="52" rx="10" fill="#e8f5ec" stroke="#2e7d4f" stroke-width="1.5"/>
+<text x="165.0" y="511.5" text-anchor="middle" font-size="12" font-weight="700" fill="#1d1d1b">Camino feliz</text>
+<text x="165.0" y="528.5" text-anchor="middle" font-size="12" fill="#1d1d1b">unos segundos</text>
+<rect x="315" y="490" width="250" height="52" rx="10" fill="#fff4e0" stroke="#c77700" stroke-width="1.5"/>
+<text x="440.0" y="511.5" text-anchor="middle" font-size="12" font-weight="700" fill="#1d1d1b">Pago o stock caídos</text>
+<text x="440.0" y="528.5" text-anchor="middle" font-size="12" fill="#1d1d1b">hasta ~25 s (reintentos)</text>
+<rect x="590" y="490" width="250" height="52" rx="10" fill="#fff4e0" stroke="#c77700" stroke-width="1.5"/>
+<text x="715.0" y="511.5" text-anchor="middle" font-size="12" font-weight="700" fill="#1d1d1b">Base de pedidos caída</text>
+<text x="715.0" y="528.5" text-anchor="middle" font-size="12" fill="#1d1d1b">hasta ~50 s (5 entregas)</text>
+<rect x="865" y="490" width="250" height="52" rx="10" fill="#fff4e0" stroke="#c77700" stroke-width="1.5"/>
+<text x="990.0" y="511.5" text-anchor="middle" font-size="12" font-weight="700" fill="#1d1d1b">Worker caído</text>
+<text x="990.0" y="528.5" text-anchor="middle" font-size="12" fill="#1d1d1b">hasta que vuelva a levantarse</text>
+<rect x="40" y="574" width="22" height="14" rx="3" fill="#f1f8f3" stroke="#2e7d4f" stroke-width="1.2"/>
+<text x="70" y="585" text-anchor="start" font-size="12" fill="#333">Datos consistentes</text>
+<rect x="240" y="574" width="22" height="14" rx="3" fill="#fff8e6" stroke="#c77700" stroke-width="1.2" stroke-dasharray="4 3"/>
+<text x="270" y="585" text-anchor="start" font-size="12" fill="#333">Zona eventual (resultado del pedido)</text>
+<path d="M560,581 H600" stroke="#333" stroke-width="1.6" marker-end="url(#af)"/>
+<text x="608" y="585" text-anchor="start" font-size="12" fill="#333">Paso del flujo</text>
+</svg>

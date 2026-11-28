@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1150 640" width="1150" height="640" role="img" aria-labelledby="t d" font-family="Inter, 'Segoe UI', Arial, sans-serif">
+<title id="t">MercadoYa: topología de mensajería con RabbitMQ</title>
+<desc id="d">La api publica OrderRequested con publisher confirms en el exchange direct orders con la routing key order.requested. La cola quorum orders tiene x-delivery-limit 5 y dead letter exchange orders.dlx. Dos réplicas del worker consumen con prefetch 1 y ack manual. Los mensajes que no se pueden procesar, o superan 5 entregas, pasan por orders.dlx a la cola orders.dead. El worker responde con ack, con reject y requeue tras 10 segundos, o con reject sin requeue.</desc>
+<defs>
+<marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#333"/></marker>
+<marker id="ad" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#b36b00"/></marker>
+<marker id="ag" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2e7d4f"/></marker>
+</defs>
+<rect width="1150" height="640" fill="#ffffff"/>
+<rect x="20" y="20" width="200" height="170" rx="12" fill="#f7f7f5" stroke="#c9c9c0" stroke-width="1.2"/>
+<text x="32" y="39" font-size="12" font-weight="700" fill="#5b5b55">Publisher</text>
+<rect x="35" y="65" width="170" height="100" rx="10" fill="#fdecee" stroke="#c8102e" stroke-width="1.5"/>
+<text x="120.0" y="93.5" text-anchor="middle" font-size="12" font-weight="700" fill="#1d1d1b">api :5001</text>
+<text x="120.0" y="110.5" text-anchor="middle" font-size="12" fill="#1d1d1b">publisher confirms</text>
+<text x="120.0" y="127.5" text-anchor="middle" font-size="12" fill="#1d1d1b">mensaje persistente</text>
+<text x="120.0" y="144.5" text-anchor="middle" font-size="12" fill="#1d1d1b">mandatory</text>
+<rect x="250" y="20" width="500" height="170" rx="12" fill="#f7f7f5" stroke="#c9c9c0" stroke-width="1.2"/>
+<text x="262" y="39" font-size="12" font-weight="700" fill="#5b5b55">RabbitMQ (topología definida en definitions.json)</text>
+<rect x="265" y="65" width="150" height="100" rx="10" fill="#f3e8fa" stroke="#7b3fa0" stroke-width="1.5"/>
+<text x="340.0" y="110.5" text-anchor="middle" font-size="12" font-weight="700" fill="#1d1d1b">exchange orders</text>
+<text x="340.0" y="127.5" text-anchor="middle" font-size="12" fill="#1d1d1b">direct · durable</text>
+<rect x="560" y="65" width="175" height="100" rx="10" fill="#f3e8fa" stroke="#7b3fa0" stroke-width="1.5"/>
+<text x="647.5" y="102.0" text-anchor="middle" font-size="12" font-weight="700" fill="#1d1d1b">cola orders</text>
+<text x="647.5" y="119.0" text-anchor="middle" font-size="12" fill="#1d1d1b">quorum · durable</text>
+<text x="647.5" y="136.0" text-anchor="middle" font-size="12" fill="#1d1d1b">x-delivery-limit: 5</text>
+<path d="M205,115 H265" fill="none" stroke="#333" stroke-width="1.6" marker-end="url(#af)"/>
+<text x="235" y="106" text-anchor="middle" font-size="11" fill="#333">publica</text>
+<path d="M415,115 H560" fill="none" stroke="#333" stroke-width="1.6" marker-end="url(#af)"/>
+<text x="487" y="106" text-anchor="middle" font-size="11" fill="#333">routing key</text>
+<text x="487" y="134" text-anchor="middle" font-size="11" fill="#333">order.requested</text>
+<rect x="780" y="20" width="350" height="170" rx="12" fill="#f7f7f5" stroke="#c9c9c0" stroke-width="1.2"/>
+<text x="792" y="39" font-size="12" font-weight="700" fill="#5b5b55">worker · 2 réplicas (consumidores competidores)</text>
+<rect x="795" y="60" width="150" height="56" rx="10" fill="#fdecee" stroke="#c8102e" stroke-width="1.5"/>
+<text x="870.0" y="83.5" text-anchor="middle" font-size="12" font-weight="700" fill="#1d1d1b">worker 1</text>
+<text x="870.0" y="100.5" text-anchor="middle" font-size="12" fill="#1d1d1b">prefetch 1 · ack manual</text>
+<rect x="795" y="126" width="150" height="56" rx="10" fill="#fdecee" stroke="#c8102e" stroke-width="1.5"/>
+<text x="870.0" y="149.5" text-anchor="middle" font-size="12" font-weight="700" fill="#1d1d1b">worker 2</text>
+<text x="870.0" y="166.5" text-anchor="middle" font-size="12" fill="#1d1d1b">prefetch 1 · ack manual</text>
+
+<path d="M735,100 H765 V88 H795" fill="none" stroke="#333" stroke-width="1.6" marker-end="url(#af)"/>
+<path d="M735,130 H765 V154 H795" fill="none" stroke="#333" stroke-width="1.6" marker-end="url(#af)"/>
+<text x="962" y="92" text-anchor="start" font-size="11" fill="#333">RabbitMQ reparte</text>
+<text x="962" y="106" text-anchor="start" font-size="11" fill="#333">los pedidos entre</text>
+<text x="962" y="120" text-anchor="start" font-size="11" fill="#333">las réplicas</text>
+<rect x="250" y="225" width="880" height="150" rx="12" fill="#f7f7f5" stroke="#c9c9c0" stroke-width="1.2"/>
+<text x="262" y="244" font-size="12" font-weight="700" fill="#5b5b55">Dead letter</text>
+<rect x="290" y="265" width="170" height="90" rx="10" fill="#f3e8fa" stroke="#7b3fa0" stroke-width="1.5"/>
+<text x="375.0" y="305.5" text-anchor="middle" font-size="12" font-weight="700" fill="#1d1d1b">exchange orders.dlx</text>
+<text x="375.0" y="322.5" text-anchor="middle" font-size="12" fill="#1d1d1b">direct · durable</text>
+<rect x="540" y="265" width="185" height="90" rx="10" fill="#f3e8fa" stroke="#7b3fa0" stroke-width="1.5"/>
+<text x="632.5" y="297.0" text-anchor="middle" font-size="12" font-weight="700" fill="#1d1d1b">cola orders.dead</text>
+<text x="632.5" y="314.0" text-anchor="middle" font-size="12" fill="#1d1d1b">quorum · durable</text>
+<text x="632.5" y="331.0" text-anchor="middle" font-size="12" fill="#1d1d1b">debe estar siempre en 0</text>
+<rect x="790" y="265" width="310" height="90" rx="10" fill="#fff4e0" stroke="#c77700" stroke-width="1.5"/>
+<text x="945.0" y="297.0" text-anchor="middle" font-size="12" font-weight="700" fill="#1d1d1b">Intervención manual</text>
+<text x="945.0" y="314.0" text-anchor="middle" font-size="12" fill="#1d1d1b">revisar el mensaje en la consola de RabbitMQ</text>
+<text x="945.0" y="331.0" text-anchor="middle" font-size="12" fill="#1d1d1b">y, si corresponde, republicarlo (es seguro)</text>
+<path d="M647,165 V208 H375 V265" fill="none" stroke="#b36b00" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#ad)"/>
+<text x="657" y="196" text-anchor="start" font-size="11" fill="#8a4a00">5 entregas fallidas</text>
+<text x="657" y="210" text-anchor="start" font-size="11" fill="#8a4a00">o reject sin requeue</text>
+<path d="M460,310 H540" fill="none" stroke="#333" stroke-width="1.6" marker-end="url(#af)"/>
+<text x="500" y="300" text-anchor="middle" font-size="11" fill="#333">orders.dead</text>
+<path d="M725,310 H790" fill="none" stroke="#333" stroke-width="1.6" marker-end="url(#af)"/>
+<rect x="20" y="400" width="1110" height="170" rx="12" fill="#f7f7f5" stroke="#c9c9c0" stroke-width="1.2"/>
+<text x="32" y="419" font-size="12" font-weight="700" fill="#5b5b55">Cómo responde el worker al broker según el resultado de la SAGA</text>
+<rect x="40" y="440" width="340" height="110" rx="10" fill="#e8f5ec" stroke="#2e7d4f" stroke-width="1.5"/>
+<text x="210.0" y="473.5" text-anchor="middle" font-size="12" font-weight="700" fill="#1d1d1b">Ack</text>
+<text x="210.0" y="490.5" text-anchor="middle" font-size="12" fill="#1d1d1b">El pedido llegó a un estado final</text>
+<text x="210.0" y="507.5" text-anchor="middle" font-size="12" fill="#1d1d1b">(o ya estaba finalizado: mensaje duplicado).</text>
+<text x="210.0" y="524.5" text-anchor="middle" font-size="12" fill="#1d1d1b">El mensaje sale de la cola.</text>
+<rect x="405" y="440" width="340" height="110" rx="10" fill="#fff4e0" stroke="#c77700" stroke-width="1.5"/>
+<text x="575.0" y="473.5" text-anchor="middle" font-size="12" font-weight="700" fill="#1d1d1b">Requeue</text>
+<text x="575.0" y="490.5" text-anchor="middle" font-size="12" fill="#1d1d1b">Falla transitoria (base caída, no se pudo liberar stock).</text>
+<text x="575.0" y="507.5" text-anchor="middle" font-size="12" fill="#1d1d1b">Pausa de 10 s y reject con requeue: vuelve</text>
+<text x="575.0" y="524.5" text-anchor="middle" font-size="12" fill="#1d1d1b">a la cola y cuenta como una entrega.</text>
+<rect x="770" y="440" width="340" height="110" rx="10" fill="#fdecee" stroke="#c8102e" stroke-width="1.5"/>
+<text x="940.0" y="473.5" text-anchor="middle" font-size="12" font-weight="700" fill="#1d1d1b">DeadLetter</text>
+<text x="940.0" y="490.5" text-anchor="middle" font-size="12" fill="#1d1d1b">JSON roto, sin orderId o pedido inexistente.</text>
+<text x="940.0" y="507.5" text-anchor="middle" font-size="12" fill="#1d1d1b">Reject sin requeue: va directo a orders.dead,</text>
+<text x="940.0" y="524.5" text-anchor="middle" font-size="12" fill="#1d1d1b">sin reintentos.</text>
+<path d="M40,601 H80" stroke="#333" stroke-width="1.6" marker-end="url(#af)"/>
+<text x="88" y="605" text-anchor="start" font-size="12" fill="#333">Mensaje en circulación normal</text>
+<path d="M340,601 H380" stroke="#b36b00" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#ad)"/>
+<text x="388" y="605" text-anchor="start" font-size="12" fill="#333">Camino de los mensajes descartados por la cola</text>
+</svg>

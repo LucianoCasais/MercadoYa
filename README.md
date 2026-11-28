@@ -4,6 +4,18 @@ Sistema de gestión y catálogo web de ventas (.NET 10 + Angular + Keycloak). Di
 
 Bocetos de pantallas (HTML interactivo): [`docs/boceto-pantallas.html`](docs/boceto-pantallas.html)
 
+## Documentación
+
+| Documento | Contenido |
+|---|---|
+| [`docs/arquitectura-general.md`](docs/arquitectura-general.md) | Componentes, conexiones, seguridad y fallos |
+| [`docs/secuencia-checkout-saga.md`](docs/secuencia-checkout-saga.md) | SAGA del checkout: pasos, compensaciones y diagramas de secuencia |
+| [`docs/consistencia-eventual.md`](docs/consistencia-eventual.md) | Qué es consistente, la zona de consistencia eventual y sus garantías |
+| [`docs/mensajeria.md`](docs/mensajeria.md) | RabbitMQ: topología, mensaje, reintentos y cola de mensajes muertos |
+| [`docs/pruebas-de-fallo.md`](docs/pruebas-de-fallo.md) | Pruebas automáticas y manuales de caídas y concurrencia |
+| [`docs/verificacion.md`](docs/verificacion.md) | Verificación de los indicadores del acta |
+| [`docs/manual-de-usuario.md`](docs/manual-de-usuario.md) | Guía de uso para clientes y administradores |
+
 ## Levantar el sistema
 
 ```bash

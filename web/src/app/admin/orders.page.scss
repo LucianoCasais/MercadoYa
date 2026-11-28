@@ -8,8 +8,7 @@ th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--li
 th { font-size: .85rem; color: var(--muted); font-weight: 600; }
 .num { text-align: right; white-space: nowrap; }
 code { font-size: .85rem; }
-.acts { white-space: nowrap; }
-.acts > * + * { margin-left: 6px; }
+.acts > * { margin: 2px 6px 2px 0; }   // los botones pasan a otra linea en pantallas angostas (sin scroll horizontal)
 .danger { color: var(--no); border-color: var(--no); }
 .t-confirmado, .t-entregado { background: var(--ok-bg); color: var(--ok); }
 .t-pendiente { background: var(--wait-bg); color: var(--wait); }

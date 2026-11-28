@@ -1,8 +1,8 @@
 # MercadoYa — Secuencia del checkout con SAGA y compensaciones
 
-> **Estado:** propuesta de diseño (borrador v2, alineada con el Acta de Constitución).
-> **Cambios v2:** se agrega el escenario de falla de la reserva de stock (`StockNoDisponible`), el de falla al confirmar tras cobrar y las pruebas 9 y 10.
-> **Documentos relacionados:** [`arquitectura-general.md`](./arquitectura-general.md) · carpeta `contracts/`.
+> **Estado:** implementado y verificado (SAGA orquestada por el `worker`, ver `OrderSagaProcessor` en `src/Modules/Pedidos/OrderSaga.cs`). Este documento describe el diseño y lo que hace el código.
+> **Historial:** la v2 agregó el escenario de falla de la reserva de stock (`StockNoDisponible`), el de falla al confirmar tras cobrar y las pruebas 9 y 10.
+> **Documentos relacionados:** [`arquitectura-general.md`](./arquitectura-general.md) · [`consistencia-eventual.md`](./consistencia-eventual.md) · [`mensajeria.md`](./mensajeria.md) · [`pruebas-de-fallo.md`](./pruebas-de-fallo.md) · carpeta `contracts/`.
 
 ## 1. Qué resuelve este flujo
 
@@ -31,6 +31,12 @@ Comprar en MercadoYa involucra tres recursos que viven en lugares distintos: el 
 | 4 | Confirmar el pedido | — | La actualización de estado solo aplica si el pedido sigue Pendiente |
 
 Una vez que el pago está aprobado se pasa el *pivote* de la SAGA: a partir de ahí ya no se compensa hacia atrás, solo se reintenta hacia adelante hasta confirmar. Como el cobro es idempotente, reintentar es seguro.
+
+### Vista general
+
+![SAGA del checkout con compensaciones](./saga-checkout.svg)
+
+El diagrama resume los pasos, qué falla en cada uno y qué se compensa. Los diagramas de secuencia siguientes muestran el detalle de los mensajes (es un SVG: `saga-checkout.svg`).
 
 ## 4. Diagrama de secuencia completo
 
@@ -219,9 +225,9 @@ Los cambios de estado del pedido son condicionales (`UPDATE ... WHERE Status = '
 | Sin reembolso | El pago es simulado, así que no existe compensación del cobro | Paso de reembolso en `payments` si el pago fuese real |
 | Orquestador único lógico | Todo el conocimiento del flujo está en el worker | Aceptable por la simplicidad; es la contracara de elegir orquestación |
 
-## 11. Pruebas sugeridas (para el día 12 del plan)
+## 11. Pruebas de la SAGA
 
-Cómo ejecutarlas a mano y qué test automático cubre cada una: [pruebas-de-fallo.md](pruebas-de-fallo.md).
+Escenarios para probar la SAGA. Para cada tipo de falla, cómo ejecutarlo a mano y qué test automático lo cubre: [pruebas-de-fallo.md](pruebas-de-fallo.md).
 
 1. Compra exitosa de punta a punta.
 2. Compra de un producto sin stock.

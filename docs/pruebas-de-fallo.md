@@ -26,7 +26,7 @@ Para correr solo los que no lo necesitan: `dotnet test --filter "Category!=Integ
 ## 2. Pruebas manuales con todo el sistema levantado
 
 Requisito: `docker compose up -d --build` con el sistema sano (`docker compose ps` muestra todo `healthy`).
-Los pedidos se crean desde la web (`http://localhost:4200`, usuario `cliente@mercadoya.local` / `Cliente123!`); el stock y los estados se ven con el panel admin (`admin@mercadoya.local` / `Admin123!`) o con SQL:
+Los pedidos se crean desde la web (`http://localhost:3000`, usuario `cliente@mercadoya.local` / `Cliente123!`); el stock y los estados se ven con el panel admin (`admin@mercadoya.local` / `Admin123!`) o con SQL:
 
 ```powershell
 "SELECT left(""Id""::text,8) AS pedido, ""Status"", ""Reason"" FROM pedidos.""Order"" ORDER BY ""CreatedAt"" DESC LIMIT 5;" | docker compose exec -T postgres psql -U mercadoya -d mercadoya

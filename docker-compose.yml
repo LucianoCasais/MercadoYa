@@ -66,6 +66,7 @@ services:
   api:
     build: { context: ., dockerfile: Dockerfile.dotnet, args: { PROJECT: MercadoYa.Api } }
     environment: &dotnet-env
+      Logging__Json: "true"   # Serilog: una linea JSON por evento (filtrable por CorrelationId). El worker lo hereda de aca
       ConnectionStrings__Mercadoya: Host=postgres;Database=mercadoya;Username=mercadoya;Password=${POSTGRES_PASSWORD:-mercadoya_dev}
       Keycloak__Authority: http://keycloak:8080/realms/mercadoya
       Keycloak__Issuer: http://localhost:8081/realms/mercadoya
@@ -124,6 +125,7 @@ services:
       Keycloak__Audience: mercadoya-api
       Kestrel__Endpoints__Grpc__Url: http://+:8081     # gRPC (HTTP/2)
       Kestrel__Endpoints__Health__Url: http://+:8080   # /health/live y /health/ready (HTTP/1.1)
+      Logging__Json: "true"
     ports: ["5003:8081"]   # gRPC; el 8080 interno queda para health checks
     healthcheck:
       # La imagen aspnet no trae curl: se pide /health/ready con bash y /dev/tcp.
