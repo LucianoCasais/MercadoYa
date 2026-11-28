@@ -51,7 +51,7 @@ Después de cada prueba, dejar el sistema sano antes de la siguiente (`docker co
 1. `docker compose stop payments`
 2. En la web, confirmar un pedido.
 3. **Esperado:** el pedido queda `Pendiente` unos segundos (reintentos con espera creciente) y termina `Rechazado / PagoNoDisponible`; el stock vuelve a su valor original; la pantalla de seguimiento muestra el rechazo y el carrito recupera los productos.
-4. Repetir con 5 o más pedidos seguidos: en los logs aparece el circuit breaker abierto (`BrokenCircuitException`) y los pedidos siguientes se rechazan al instante, sin esperar los timeouts.
+4. Repetir con 5 o más pedidos seguidos: en los logs aparece el circuit breaker abierto (`BrokenCircuitException`; cuando pasan los 30 s el circuito pasa a semiabierto y prueba una llamada real) y los pedidos siguientes se rechazan al instante, sin esperar los timeouts.
 5. `docker compose start payments`
 6. **Esperado:** pasados unos 30 s (el breaker prueba de nuevo) los pedidos vuelven a confirmarse.
 
@@ -64,10 +64,16 @@ Después de cada prueba, dejar el sistema sano antes de la siguiente (`docker co
 
 ### 2.4 Stock (API interna) caído
 
-1. `docker compose stop worker` y crear un pedido desde la web: queda `Pendiente` en la cola.
-2. `docker compose stop api` y después `docker compose up -d worker` (si la API no está, el worker espera a que esté sana: levantarlo igual con `docker compose up -d --no-deps worker`).
-3. **Esperado:** el worker no puede reservar stock; en los logs se ve el reintento con espera creciente, el circuit breaker del stock y el mensaje que vuelve a la cola entre intentos.
-4. Si la API vuelve a tiempo (`docker compose start api`, antes de unos 50 s) el pedido se confirma. Si no, termina `Rechazado / StockNoDisponible` sin stock descontado.
+1. `docker compose stop worker` y crear un pedido desde la web: queda `Pendiente` en la cola `orders`.
+2. `docker compose stop api` y después `docker compose up -d --no-deps worker` (sin `--no-deps` el worker no arranca, porque espera a que la API esté sana).
+3. Mirar los logs del worker enseguida (el proceso completo dura unos 2 minutos: cada intento contra la API apagada espera su timeout de 5 s; repetir el comando a medida que avanza): `docker compose logs -f worker`, o para filtrar en PowerShell `docker compose logs --since 3m worker | Select-String "stock|circuit|rechazado|liberar"`.
+4. **Esperado, en este orden:**
+   - Reserva: `[stock] intento 1 fallido (TimeoutRejectedException); se reintenta en ... ms`, luego el intento 2 y el 3, con una espera que crece (~0,5 s, ~1 s y ~2 s más el jitter). Con la API apagada el error suele ser el timeout de 5 s de cada intento (por eso salen espaciados unos 5 s) y el último puede ser `HttpRequestException: Name or service not known`, porque Docker deja de resolver el nombre `api`.
+   - Se agotan los reintentos: `Fallo la reserva de stock del pedido ...` y `Pedido ... rechazado: StockNoDisponible`.
+   - Compensación: la liberación también falla y el circuit breaker se abre al quinto fallo seguido (cuatro de la reserva y uno de la liberación): `[stock] circuit breaker ABIERTO por 30 s`. Después `No se pudo liberar el stock del pedido ...; se reintenta`.
+   - El mensaje vuelve a la cola: el worker espera 10 s y lo devuelve; cada reentrega falla enseguida (`BrokenCircuitException`; cuando pasan los 30 s el circuito pasa a semiabierto y prueba una llamada real) mientras el circuito sigue abierto. En Management se ve el contador de reentregas de `orders`.
+5. **Resultado final:** el pedido queda `Rechazado / StockNoDisponible` (aunque la API vuelva, la reserva ya falló y no se confirma) y el stock no cambia. Si la API vuelve antes de agotar las reentregas (`docker compose start api`, dentro de ~2 minutos) la liberación funciona, el mensaje se confirma y `orders.dead` queda en 0. Si no vuelve, el mensaje termina en `orders.dead` (ver la sección 4: no hay nada reservado que devolver, se descarta).
+6. Dejar el sistema sano: `docker compose up -d`.
 
 ### 2.5 Doble compra del último stock
 
@@ -81,7 +87,24 @@ Después de cada prueba, dejar el sistema sano antes de la siguiente (`docker co
 2. En Management, en la pestaña *Consumers* de la cola `orders` aparecen dos consumidores (`mercadoya-worker-<id>`).
 3. Crear varios pedidos seguidos: los logs de ambos workers muestran pedidos distintos y ninguno se procesa dos veces.
 
-## 3. Cómo leer `orders.dead`
+## 3. Registro de resultados
+
+Cada escenario se comprueba de dos maneras: el test automático (sección 1) y la prueba manual con el sistema completo (sección 2). La columna *Manual* se completa con fecha y resultado cada vez que se corre; la verificación desde cero del 25/11 (checklist E2E, [verificacion.md](verificacion.md)) cubrió los escenarios que figuran con esa fecha.
+
+| Escenario | Test automático | Manual | Fecha | Observado |
+|---|---|---|---|---|
+| 2.1 RabbitMQ caído | `OrderSagaRabbitTests`, `CheckoutAsyncTests` | OK | 25/11 | E2E #12: 503 y pedido Rechazado (BrokerNoDisponible); #13: el catálogo responde y `/health/ready` sigue en 200; #14: al volver, una compra se confirma |
+| 2.2 Payments caído | `LastStockSagaTests`, `ResilienceTests` | OK | 25/11 y 28/11 | 25/11 (E2E #11): Rechazado (PagoNoDisponible) y el stock vuelve. 28/11: con 5 o más pedidos seguidos, resultado según lo esperado (circuit breaker abierto, pedidos rechazados sin esperar los timeouts y recuperación al volver Payments) |
+| 2.3 Worker caído | `OrderSagaRabbitTests` | OK | 28/11 | Resultado según lo esperado: con el worker apagado los pedidos quedan `Pendiente` en la cola `orders`; al levantarlo pasan a `Confirmado` y la cola vuelve a 0 |
+| 2.4 Stock (API interna) caído | `ResilienceTests`, `OrderSagaProcessorTests` | OK | 28/11 | Con la API apagada: 3 reintentos del stock con espera creciente (timeouts de 5 s; el último falló por `Name or service not known`), pedido `Rechazado / StockNoDisponible` a los ~20 s, circuit breaker abierto y semiabierto en ciclos de 30 s, y la compensación reentregada cada ~10 s (`No se pudo liberar el stock ...; se reintenta`). Sin la API de vuelta, el mensaje terminó en `orders.dead` (2 mensajes: los dos pedidos `Rechazado / StockNoDisponible` de la prueba); el stock no cambió |
+| 2.5 Doble compra del último stock | `LastStockSagaTests` | OK | 25/11 | E2E #10: una Confirmada y una Rechazada (SinStock); stock 0 |
+| 2.6 Dos réplicas del worker | `OrderSagaRabbitTests.Dos_workers_reparten_...` | OK | 25/11 y 28/11 | 25/11: 2 consumidores en la cola `orders`. 28/11: con varios pedidos seguidos, resultado según lo esperado (los logs de ambas réplicas muestran pedidos distintos y ninguno se procesó dos veces) |
+
+Estado de la cola de errores al cerrar cada corrida: `orders.dead` debe estar en 0 (sección 4).
+
+Para completar una fila pendiente: correr el escenario de la sección 2, anotar la fecha y escribir en *Observado* lo que se vio (estado final del pedido, stock, logs relevantes). Si el resultado no coincide con lo esperado, la fila se marca **Falla** y el hallazgo se agrega a [verificacion.md](verificacion.md) (sección *Hallazgos abiertos*).
+
+## 4. Cómo leer `orders.dead`
 
 La cola `orders.dead` debería estar siempre en 0. Si aparece un mensaje, es un caso que la SAGA no pudo resolver sola:
 

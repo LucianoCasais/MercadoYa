@@ -19,10 +19,16 @@ public static class AdminOrderEndpoints
             return result is null
                 ? Results.ValidationProblem(new Dictionary<string, string[]> { ["status"] = [error!] })
                 : Results.Ok(result);
-        });
+        }).WithSummary("Listar pedidos")
+          .WithDescription("Pedidos de todos los clientes, los más nuevos primero. `status` filtra por estado (Pendiente, Confirmado, Rechazado, Entregado o Cancelado).")
+          .Produces<AdminOrderPage>(StatusCodes.Status200OK)
+          .ProducesValidationProblem();
 
         g.MapGet("/{id:guid}", async (Guid id, AdminOrderService svc, CancellationToken ct) =>
-            await svc.GetAsync(id, ct) is { } order ? Results.Ok(order) : NotFound(id));
+            await svc.GetAsync(id, ct) is { } order ? Results.Ok(order) : NotFound(id))
+            .WithSummary("Ver un pedido")
+            .Produces<OrderResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         // Confirmado -> Entregado | Cancelado (cancelar libera el stock).
         g.MapPatch("/{id:guid}/status", async (Guid id, ChangeOrderStatusRequest body, AdminOrderService svc, CancellationToken ct) =>
@@ -36,7 +42,13 @@ public static class AdminOrderEndpoints
                 ChangeStatusOutcome.InvalidTransition => Results.Problem(statusCode: StatusCodes.Status409Conflict, title: "Transicion no permitida", detail: r.Detail),
                 _ => Results.Problem(statusCode: StatusCodes.Status503ServiceUnavailable, title: "Stock no disponible", detail: r.Detail),
             };
-        });
+        }).WithSummary("Cambiar el estado de un pedido")
+          .WithDescription("Solo desde Confirmado: pasa a `Entregado` o `Cancelado` (cancelar libera el stock reservado). Cualquier otro cambio responde 409.")
+          .Produces<OrderResponse>(StatusCodes.Status200OK)
+          .ProducesValidationProblem()
+          .ProducesProblem(StatusCodes.Status404NotFound)
+          .ProducesProblem(StatusCodes.Status409Conflict)
+          .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
         return v1;
     }
 

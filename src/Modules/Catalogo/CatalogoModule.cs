@@ -72,7 +72,12 @@ public static class CatalogoModule
             }, ct);
             MarkCache(http, hit);
             return Results.Ok(result);
-        }).AllowAnonymous();
+        }).AllowAnonymous().WithTags("Catálogo")
+          .WithSummary("Listar productos")
+          .WithDescription("Productos activos, ordenados por nombre. `search` busca en el nombre sin distinguir mayúsculas ni tildes (hasta 100 caracteres); " +
+                          "`categoryId` incluye las subcategorías; `pageSize` admite hasta 50. La respuesta lleva el header `X-Cache` (HIT o MISS).")
+          .Produces<PagedResult<ProductDto>>(StatusCodes.Status200OK)
+          .ProducesValidationProblem();
 
         v1.MapGet("/products/{id:int}", async (int id, CatalogoDbContext db, CatalogCache cache, HttpContext http, CancellationToken ct) =>
         {
@@ -83,7 +88,11 @@ public static class CatalogoModule
                 .FirstOrDefaultAsync(token), ct);
             MarkCache(http, hit);
             return dto is null ? Results.NotFound() : Results.Ok(dto);
-        }).AllowAnonymous();
+        }).AllowAnonymous().WithTags("Catálogo")
+          .WithSummary("Ver un producto")
+          .WithDescription("Detalle de un producto activo. Un producto inactivo o inexistente responde 404.")
+          .Produces<ProductDto>(StatusCodes.Status200OK)
+          .ProducesProblem(StatusCodes.Status404NotFound);
 
         v1.MapGet("/categories", async (CatalogoDbContext db, CatalogCache cache, HttpContext http, CancellationToken ct) =>
         {
@@ -92,7 +101,10 @@ public static class CatalogoModule
                 .Select(c => new CategoryDto(c.Id, c.Name, c.ParentId)).ToListAsync(token), ct);
             MarkCache(http, hit);
             return Results.Ok(list);
-        }).AllowAnonymous();
+        }).AllowAnonymous().WithTags("Catálogo")
+          .WithSummary("Listar categorías")
+          .WithDescription("Árbol de categorías como lista plana: cada una indica su `parentId` (nulo en las de primer nivel).")
+          .Produces<IReadOnlyList<CategoryDto>>(StatusCodes.Status200OK);
         return v1;
     }
 

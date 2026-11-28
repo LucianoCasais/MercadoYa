@@ -28,7 +28,16 @@ public static class CheckoutEndpoints
             return result.Accepted
                 ? Results.Accepted($"/api/v1/orders/{result.Order!.Id}", result.Order)
                 : Results.Ok(result.Order);
-        }).RequireAuthorization(Policies.Cliente);
+        }).RequireAuthorization(Policies.Cliente).WithTags("Pedidos")
+          .WithMetadata(new RequiresIdempotencyKey())
+          .WithSummary("Crear un pedido (checkout)")
+          .WithDescription("Crea el pedido con los precios actuales y lo deja Pendiente. El cuerpo lleva hasta 50 líneas de producto y cantidad (hasta 99 por producto). " +
+                           "202: el pedido se aceptó y lo resuelve el worker; el resultado se consulta con `GET /orders/{id}`. " +
+                           "200: el pedido ya existía (reintento con el mismo `Idempotency-Key`: no se duplica). 503: no se pudo enviar el pedido a procesar (el pedido queda Rechazado).")
+          .Produces<OrderResponse>(StatusCodes.Status202Accepted)
+          .Produces<OrderResponse>(StatusCodes.Status200OK)
+          .ProducesProblem(StatusCodes.Status400BadRequest)
+          .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
         // GET /orders/{id}: seguimiento. Solo el dueño del pedido; si es de otro usuario responde 404 (no revela que existe).
         v1.MapGet("/orders/{id:guid}", async (Guid id, HttpContext http, CheckoutService checkout, CancellationToken ct) =>
@@ -38,7 +47,11 @@ public static class CheckoutEndpoints
             return await checkout.GetAsync(userId, id, ct) is { } order
                 ? Results.Ok(order)
                 : Results.Problem(statusCode: StatusCodes.Status404NotFound, title: "Pedido no encontrado", detail: $"No existe el pedido {id}.");
-        }).RequireAuthorization(Policies.Cliente);
+        }).RequireAuthorization(Policies.Cliente).WithTags("Pedidos")
+          .WithSummary("Consultar un pedido")
+          .WithDescription("Seguimiento del pedido: estado (Pendiente, Confirmado, Rechazado, Entregado o Cancelado), motivo del rechazo e ítems. Solo lo ve su dueño; el de otro usuario responde 404.")
+          .Produces<OrderResponse>(StatusCodes.Status200OK)
+          .ProducesProblem(StatusCodes.Status404NotFound);
         return v1;
     }
 }

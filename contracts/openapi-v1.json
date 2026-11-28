@@ -1,0 +1,1444 @@
+{
+  "components": {
+    "schemas": {
+      "AdminOrderPage": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AdminOrderSummary"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "page": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "pageSize": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "total": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "AdminOrderSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "buyerName": {
+            "nullable": true,
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "itemCount": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "reason": {
+            "nullable": true,
+            "type": "string"
+          },
+          "status": {
+            "nullable": true,
+            "type": "string"
+          },
+          "totalCents": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "AdminProductDto": {
+        "additionalProperties": false,
+        "properties": {
+          "active": {
+            "type": "boolean"
+          },
+          "categoryId": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "description": {
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "imageUrl": {
+            "nullable": true,
+            "type": "string"
+          },
+          "name": {
+            "nullable": true,
+            "type": "string"
+          },
+          "priceCents": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "stock": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "AdminProductDtoPagedResult": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AdminProductDto"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "page": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "pageSize": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "total": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "CategoryDto": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "name": {
+            "nullable": true,
+            "type": "string"
+          },
+          "parentId": {
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "ChangeOrderStatusRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "CreateOrderRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/OrderLineRequest"
+            },
+            "nullable": true,
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "CreateProductRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "categoryId": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "description": {
+            "nullable": true,
+            "type": "string"
+          },
+          "imageUrl": {
+            "nullable": true,
+            "type": "string"
+          },
+          "initialStock": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "name": {
+            "nullable": true,
+            "type": "string"
+          },
+          "priceCents": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "HttpValidationProblemDetails": {
+        "additionalProperties": {},
+        "properties": {
+          "detail": {
+            "nullable": true,
+            "type": "string"
+          },
+          "errors": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "nullable": true,
+            "type": "object"
+          },
+          "instance": {
+            "nullable": true,
+            "type": "string"
+          },
+          "status": {
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          },
+          "title": {
+            "nullable": true,
+            "type": "string"
+          },
+          "type": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "OrderLineRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "productId": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "quantity": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "OrderLineResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "productId": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "productName": {
+            "nullable": true,
+            "type": "string"
+          },
+          "quantity": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "unitPriceCents": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "OrderResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "buyerName": {
+            "nullable": true,
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/OrderLineResponse"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "reason": {
+            "nullable": true,
+            "type": "string"
+          },
+          "status": {
+            "nullable": true,
+            "type": "string"
+          },
+          "totalCents": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "ProblemDetails": {
+        "additionalProperties": {},
+        "properties": {
+          "detail": {
+            "nullable": true,
+            "type": "string"
+          },
+          "instance": {
+            "nullable": true,
+            "type": "string"
+          },
+          "status": {
+            "format": "int32",
+            "nullable": true,
+            "type": "integer"
+          },
+          "title": {
+            "nullable": true,
+            "type": "string"
+          },
+          "type": {
+            "nullable": true,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ProductDto": {
+        "additionalProperties": false,
+        "properties": {
+          "categoryId": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "description": {
+            "nullable": true,
+            "type": "string"
+          },
+          "id": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "imageUrl": {
+            "nullable": true,
+            "type": "string"
+          },
+          "name": {
+            "nullable": true,
+            "type": "string"
+          },
+          "priceCents": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "stock": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "ProductDtoPagedResult": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ProductDto"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "page": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "pageSize": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "total": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "ReserveRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/StockItem"
+            },
+            "nullable": true,
+            "type": "array"
+          },
+          "orderId": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "StockAdjustRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "delta": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "StockAdjustedDto": {
+        "additionalProperties": false,
+        "properties": {
+          "productId": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "stock": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "StockItem": {
+        "additionalProperties": false,
+        "properties": {
+          "productId": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "quantity": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "UpdateProductRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "active": {
+            "type": "boolean"
+          },
+          "categoryId": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "description": {
+            "nullable": true,
+            "type": "string"
+          },
+          "imageUrl": {
+            "nullable": true,
+            "type": "string"
+          },
+          "name": {
+            "nullable": true,
+            "type": "string"
+          },
+          "priceCents": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "Bearer": {
+        "bearerFormat": "JWT",
+        "description": "JWT emitido por Keycloak.",
+        "scheme": "bearer",
+        "type": "http"
+      }
+    }
+  },
+  "info": {
+    "description": "API REST de MercadoYa: catálogo público, checkout de clientes, administración de productos, stock y pedidos, y endpoints internos del worker.\n\n**Autenticación:** JWT de Keycloak (realm `mercadoya`). Para probar los endpoints protegidos, obtené un token, apretá **Authorize** y pegalo (sin la palabra Bearer).\n\n**Errores:** todos siguen ProblemDetails (RFC 9457). Cada respuesta lleva el header `X-Correlation-Id`, útil para reportar un problema; también se puede enviar uno propio en la request.\n\n**Compra asíncrona:** `POST /api/v1/orders` responde 202 con el pedido Pendiente; el resultado final se consulta con `GET /api/v1/orders/{id}`.",
+    "title": "MercadoYa API",
+    "version": "v1"
+  },
+  "openapi": "3.0.1",
+  "paths": {
+    "/api/v1/admin/orders": {
+      "get": {
+        "description": "Pedidos de todos los clientes, los más nuevos primero. `status` filtra por estado (Pendiente, Confirmado, Rechazado, Entregado o Cancelado).\n\n**Acceso:** solo el rol `admin`.",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "default": 1,
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "pageSize",
+            "schema": {
+              "default": 20,
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminOrderPage"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Falta el token o no es válido (vencido, firma, emisor o audiencia incorrectos)."
+          },
+          "403": {
+            "description": "El token es válido pero su rol no tiene permiso para esta operación."
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Listar pedidos",
+        "tags": [
+          "Admin - Pedidos"
+        ]
+      }
+    },
+    "/api/v1/admin/orders/{id}": {
+      "get": {
+        "description": "**Acceso:** solo el rol `admin`.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "description": "Falta el token o no es válido (vencido, firma, emisor o audiencia incorrectos)."
+          },
+          "403": {
+            "description": "El token es válido pero su rol no tiene permiso para esta operación."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Not Found"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Ver un pedido",
+        "tags": [
+          "Admin - Pedidos"
+        ]
+      }
+    },
+    "/api/v1/admin/orders/{id}/status": {
+      "patch": {
+        "description": "Solo desde Confirmado: pasa a `Entregado` o `Cancelado` (cancelar libera el stock reservado). Cualquier otro cambio responde 409.\n\n**Acceso:** solo el rol `admin`.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeOrderStatusRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Falta el token o no es válido (vencido, firma, emisor o audiencia incorrectos)."
+          },
+          "403": {
+            "description": "El token es válido pero su rol no tiene permiso para esta operación."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Cambiar el estado de un pedido",
+        "tags": [
+          "Admin - Pedidos"
+        ]
+      }
+    },
+    "/api/v1/admin/products": {
+      "get": {
+        "description": "Incluye los productos inactivos. `search` busca por nombre sin distinguir mayúsculas ni tildes; `pageSize` admite hasta 100.\n\n**Acceso:** solo el rol `admin`.",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "default": 1,
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "pageSize",
+            "schema": {
+              "default": 20,
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProductDtoPagedResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "description": "Falta el token o no es válido (vencido, firma, emisor o audiencia incorrectos)."
+          },
+          "403": {
+            "description": "El token es válido pero su rol no tiene permiso para esta operación."
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Listar productos (admin)",
+        "tags": [
+          "Admin - Productos"
+        ]
+      },
+      "post": {
+        "description": "Crea el producto activo y registra su stock inicial como movimiento 'Inicial', en una sola transacción. Responde 201 con el header `Location`.\n\n**Acceso:** solo el rol `admin`.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProductRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProductDto"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Falta el token o no es válido (vencido, firma, emisor o audiencia incorrectos)."
+          },
+          "403": {
+            "description": "El token es válido pero su rol no tiene permiso para esta operación."
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Crear un producto",
+        "tags": [
+          "Admin - Productos"
+        ]
+      }
+    },
+    "/api/v1/admin/products/{id}": {
+      "delete": {
+        "description": "Baja lógica (deja el producto inactivo). Es idempotente: repetirla también responde 204. Los pedidos existentes no se modifican.\n\n**Acceso:** solo el rol `admin`.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Falta el token o no es válido (vencido, firma, emisor o audiencia incorrectos)."
+          },
+          "403": {
+            "description": "El token es válido pero su rol no tiene permiso para esta operación."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Not Found"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Dar de baja un producto",
+        "tags": [
+          "Admin - Productos"
+        ]
+      },
+      "get": {
+        "description": "**Acceso:** solo el rol `admin`.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProductDto"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "description": "Falta el token o no es válido (vencido, firma, emisor o audiencia incorrectos)."
+          },
+          "403": {
+            "description": "El token es válido pero su rol no tiene permiso para esta operación."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Not Found"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Ver un producto (admin)",
+        "tags": [
+          "Admin - Productos"
+        ]
+      },
+      "put": {
+        "description": "Cambia los datos del producto (no su stock; para eso está el ajuste de stock). Usa concurrencia optimista: si otro cambio pisó el producto en el medio, responde 409.\n\n**Acceso:** solo el rol `admin`.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProductRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminProductDto"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Falta el token o no es válido (vencido, firma, emisor o audiencia incorrectos)."
+          },
+          "403": {
+            "description": "El token es válido pero su rol no tiene permiso para esta operación."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Conflict"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Editar un producto",
+        "tags": [
+          "Admin - Productos"
+        ]
+      }
+    },
+    "/api/v1/admin/products/{id}/stock": {
+      "patch": {
+        "description": "Suma (`delta` positivo) o resta (negativo) unidades y registra un movimiento de stock 'Ajuste'. `delta` no puede ser 0 ni pasar el máximo permitido, y el stock no puede quedar en negativo (409).\n\n**Acceso:** solo el rol `admin`.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StockAdjustRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockAdjustedDto"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Falta el token o no es válido (vencido, firma, emisor o audiencia incorrectos)."
+          },
+          "403": {
+            "description": "El token es válido pero su rol no tiene permiso para esta operación."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Conflict"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Ajustar el stock de un producto",
+        "tags": [
+          "Admin - Productos"
+        ]
+      }
+    },
+    "/api/v1/categories": {
+      "get": {
+        "description": "Árbol de categorías como lista plana: cada una indica su `parentId` (nulo en las de primer nivel).",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CategoryDto"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Listar categorías",
+        "tags": [
+          "Catálogo"
+        ]
+      }
+    },
+    "/api/v1/orders": {
+      "post": {
+        "description": "Crea el pedido con los precios actuales y lo deja Pendiente. El cuerpo lleva hasta 50 líneas de producto y cantidad (hasta 99 por producto). 202: el pedido se aceptó y lo resuelve el worker; el resultado se consulta con `GET /orders/{id}`. 200: el pedido ya existía (reintento con el mismo `Idempotency-Key`: no se duplica). 503: no se pudo enviar el pedido a procesar (el pedido queda Rechazado).\n\n**Acceso:** solo el rol `cliente`.",
+        "parameters": [
+          {
+            "description": "Clave que identifica esta compra (hasta 100 caracteres, por ejemplo un GUID). Repetir la request con la misma clave devuelve el mismo pedido y no lo duplica.",
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "maxLength": 100,
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOrderRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderResponse"
+                }
+              }
+            },
+            "description": "Accepted"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Falta el token o no es válido (vencido, firma, emisor o audiencia incorrectos)."
+          },
+          "403": {
+            "description": "El token es válido pero su rol no tiene permiso para esta operación."
+          },
+          "503": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Crear un pedido (checkout)",
+        "tags": [
+          "Pedidos"
+        ]
+      }
+    },
+    "/api/v1/orders/{id}": {
+      "get": {
+        "description": "Seguimiento del pedido: estado (Pendiente, Confirmado, Rechazado, Entregado o Cancelado), motivo del rechazo e ítems. Solo lo ve su dueño; el de otro usuario responde 404.\n\n**Acceso:** solo el rol `cliente`.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "description": "Falta el token o no es válido (vencido, firma, emisor o audiencia incorrectos)."
+          },
+          "403": {
+            "description": "El token es válido pero su rol no tiene permiso para esta operación."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Not Found"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Consultar un pedido",
+        "tags": [
+          "Pedidos"
+        ]
+      }
+    },
+    "/api/v1/products": {
+      "get": {
+        "description": "Productos activos, ordenados por nombre. `search` busca en el nombre sin distinguir mayúsculas ni tildes (hasta 100 caracteres); `categoryId` incluye las subcategorías; `pageSize` admite hasta 50. La respuesta lleva el header `X-Cache` (HIT o MISS).",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "search",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "categoryId",
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "default": 1,
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "pageSize",
+            "schema": {
+              "default": 12,
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductDtoPagedResult"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            },
+            "description": "Bad Request"
+          }
+        },
+        "summary": "Listar productos",
+        "tags": [
+          "Catálogo"
+        ]
+      }
+    },
+    "/api/v1/products/{id}": {
+      "get": {
+        "description": "Detalle de un producto activo. Un producto inactivo o inexistente responde 404.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductDto"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Not Found"
+          }
+        },
+        "summary": "Ver un producto",
+        "tags": [
+          "Catálogo"
+        ]
+      }
+    },
+    "/internal/v1/stock/reservations": {
+      "post": {
+        "description": "Uso interno del worker. Descuenta el stock de todos los ítems en una sola transacción y es idempotente por `orderId`: repetirla responde 200 sin descontar de nuevo. Sin stock suficiente responde 409 y no reserva nada.\n\n**Acceso:** solo el client de servicio `orders-worker` (uso interno).",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReserveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Falta el token o no es válido (vencido, firma, emisor o audiencia incorrectos)."
+          },
+          "403": {
+            "description": "El token es válido pero su rol no tiene permiso para esta operación."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            },
+            "description": "Conflict"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Reservar stock de un pedido",
+        "tags": [
+          "Interno - Stock"
+        ]
+      }
+    },
+    "/internal/v1/stock/reservations/{orderId}/release": {
+      "post": {
+        "description": "Uso interno del worker (compensación de la SAGA). Devuelve al stock lo reservado por el pedido. Es idempotente: repetirla no devuelve el stock dos veces.\n\n**Acceso:** solo el client de servicio `orders-worker` (uso interno).",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orderId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Falta el token o no es válido (vencido, firma, emisor o audiencia incorrectos)."
+          },
+          "403": {
+            "description": "El token es válido pero su rol no tiene permiso para esta operación."
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
+        "summary": "Liberar el stock de un pedido",
+        "tags": [
+          "Interno - Stock"
+        ]
+      }
+    }
+  }
+}

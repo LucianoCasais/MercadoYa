@@ -28,7 +28,7 @@ builder.Services.AddApiVersioning(o =>
     o.GroupNameFormat = "'v'V";            // documento de Swagger "v1"
     o.SubstituteApiVersionInUrl = true;    // Swagger muestra /api/v1/... y no /api/v{version}/...
 });
-builder.Services.AddEndpointsApiExplorer().AddSwaggerGen();
+builder.Services.AddMercadoYaSwagger();   // OpenAPI: info, esquema Bearer y filtros (ver OpenApiSetup)
 // CORS: solo los origenes de la web (Cors:Origins en appsettings; en Docker se pisa con Cors__Origins__0, __1...).
 // Solo los metodos que usa la API; los headers propios (Authorization, Idempotency-Key) los cubre AllowAnyHeader.
 var corsOrigins = builder.Configuration.GetSection("Cors:Origins").Get<string[]>() is { Length: > 0 } configured

@@ -148,9 +148,18 @@ public static class InventarioModule
             if (ValidateReserve(r) is { Count: > 0 } errors) return Results.ValidationProblem(errors);
             return await s.ReserveAsync(r.OrderId, r.Items, ct) == ReserveResult.InsufficientStock
                 ? Results.Problem(statusCode: 409, title: "Stock insuficiente") : Results.Ok();
-        });
+        }).WithTags("Interno - Stock")
+          .WithSummary("Reservar stock de un pedido")
+          .WithDescription("Uso interno del worker. Descuenta el stock de todos los ítems en una sola transacción y es idempotente por `orderId`: repetirla responde 200 sin descontar de nuevo. Sin stock suficiente responde 409 y no reserva nada.")
+          .Produces(StatusCodes.Status200OK)
+          .ProducesValidationProblem()
+          .ProducesProblem(StatusCodes.Status409Conflict);
         g.MapPost("/reservations/{orderId:guid}/release", async (Guid orderId, StockService s, CancellationToken ct) =>
-        { await s.ReleaseAsync(orderId, "Liberacion", ct); return Results.Ok(); });
+        { await s.ReleaseAsync(orderId, "Liberacion", ct); return Results.Ok(); })
+         .WithTags("Interno - Stock")
+         .WithSummary("Liberar el stock de un pedido")
+         .WithDescription("Uso interno del worker (compensación de la SAGA). Devuelve al stock lo reservado por el pedido. Es idempotente: repetirla no devuelve el stock dos veces.")
+         .Produces(StatusCodes.Status200OK);
         return app;
     }
 
@@ -169,7 +178,13 @@ public static class InventarioModule
                 AdjustOutcome.NotFound => Results.Problem(statusCode: 404, title: "Producto no encontrado", detail: $"No existe el producto {id}."),
                 _ => Results.Problem(statusCode: 409, title: "Stock insuficiente", detail: "El ajuste dejaria el stock en negativo."),
             };
-        }).RequireAuthorization(Policies.Admin).WithTags("Admin - Productos");
+        }).RequireAuthorization(Policies.Admin).WithTags("Admin - Productos")
+          .WithSummary("Ajustar el stock de un producto")
+          .WithDescription("Suma (`delta` positivo) o resta (negativo) unidades y registra un movimiento de stock 'Ajuste'. `delta` no puede ser 0 ni pasar el máximo permitido, y el stock no puede quedar en negativo (409).")
+          .Produces<StockAdjustedDto>(StatusCodes.Status200OK)
+          .ProducesValidationProblem()
+          .ProducesProblem(StatusCodes.Status404NotFound)
+          .ProducesProblem(StatusCodes.Status409Conflict);
         return v1;
     }
 }

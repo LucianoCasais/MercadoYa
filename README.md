@@ -51,9 +51,24 @@ Usuarios de prueba del realm `mercadoya`: `admin@mercadoya.local` / `Admin123!` 
 
 Para reiniciar todo desde cero (scripts SQL, realm y topología se aplican solo en el primer arranque): `docker compose down -v && docker compose up -d --build`.
 
+### Documentación de la API (Swagger)
+
+La especificación OpenAPI se publica en http://localhost:5001/swagger (JSON en `/swagger/v1/swagger.json`). Cada endpoint tiene resumen, respuestas posibles (incluidos `401`, `403` y `503` donde corresponde) y su tag: Catálogo, Pedidos, Admin - Productos, Admin - Pedidos e Interno - Stock. `POST /api/v1/orders` muestra el header obligatorio `Idempotency-Key`. Los endpoints protegidos llevan un candado e indican qué rol necesitan.
+
+Para probarlos desde Swagger hace falta un token: el realm no habilita el flujo con contraseña, así que se obtiene con *Get New Access Token* de Postman, igual que en las carpetas de cliente y admin de la colección (usuarios de prueba de arriba) y se pega en **Authorize** (solo el token, sin la palabra `Bearer`). Para una revisión rápida de la documentación no hace falta token: `Authorize` solo es necesario para ejecutar endpoints protegidos.
+
+El contrato versionado en git vive en `contracts/openapi-v1.json`. Se regenera con el sistema levantado y también sirve para detectar cambios no documentados:
+
+```bash
+python tests/e2e/exportar_openapi.py            # escribe contracts/openapi-v1.json
+python tests/e2e/exportar_openapi.py --check    # sale con código 1 si el archivo no coincide con la API
+```
+
 ### Probar la API con Postman
 
 Importar [`docs/postman/MercadoYa.postman_collection.json`](docs/postman/MercadoYa.postman_collection.json) y el entorno [`docs/postman/MercadoYa.local.postman_environment.json`](docs/postman/MercadoYa.local.postman_environment.json). Las carpetas se corren en orden (salud, catálogo, 401, cliente, admin y worker) y cada request valida su código HTTP. Las de cliente y admin piden el token desde la pestaña Authorization de la carpeta (*Get New Access Token*, con los usuarios de prueba de arriba).
+
+Postman y Swagger se complementan: Swagger documenta el contrato (qué recibe y devuelve cada endpoint) y Postman es el cliente que ejecuta las pruebas. `contracts/openapi-v1.json` se puede importar en Postman (*Import > File*) para generar una colección con todos los endpoints.
 
 ## Base de datos
 
@@ -96,7 +111,7 @@ Exchange `orders` → cola `orders` (quorum, `x-delivery-limit` 5) con DLX `orde
 | `MercadoYa.Payments` | Servicio gRPC de cobro simulado e idempotente, con BD propia; solo acepta el token de servicio de `orders-worker` (client credentials) | Listo. gRPC en `localhost:5003` (local y Docker); health checks en `localhost:5004` con `dotnet run` (en Docker, solo dentro del contenedor). Rechaza importes con `amount_cents % 1000 == 999` (por ejemplo un producto de $ 9,99) |
 | `tests/MercadoYa.Tests` | xUnit: dominio, checkout, SAGA, resiliencia, API y seguridad; con PostgreSQL y RabbitMQ reales (Testcontainers) | Listo (300 tests, 76 % de cobertura) |
 
-Contratos en `contracts/` (`payments.proto`, `order-requested.json`).
+Contratos en `contracts/` (`payments.proto`, `order-requested.json` y `openapi-v1.json`, este último generado con el script de la sección Swagger).
 
 ## Tests
 
